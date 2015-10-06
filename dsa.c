@@ -997,7 +997,7 @@ dsa_check_secret_key (gcry_sexp_t keyparms)
 
 static gpg_err_code_t
 fault_sign (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
-      int flags, int hashalgo)
+      int flags, int hashalgo, gcry_mpi_t sig_k)
 {
   gpg_err_code_t rc;
   gcry_mpi_t hash;
@@ -1060,9 +1060,13 @@ fault_sign (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
   mpi_subm(k_tilde,k,e,skey->q);
 
   log_mpidump("kfault is   x", k_tilde);
+
+  //DEBUG ---- Pass the value of k fault to our attack program
+  mpi_mul(sig_k, k_tilde, one);
   
   /* r = (a^k mod p) mod q */
   mpi_powm( r, skey->g, k_tilde, skey->p );
+
   mpi_fdiv_r( r, r, skey->q );
 
   log_mpidump("rfault is   r", r);
@@ -1112,6 +1116,8 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
   gcry_mpi_t sig_s = NULL;
   gcry_sexp_t par;
 
+  gcry_mpi_t sig_k = NULL;
+
 
   _gcry_pk_util_init_encoding_ctx (&ctx, PUBKEY_OP_SIGN,
                                    dsa_get_nbits (keyparms));
@@ -1140,6 +1146,7 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
 
   sig_r = mpi_new (0);
   sig_s = mpi_new (0);
+  sig_k = mpi_new (0);
 
    //get the attack param
   par = _gcry_sexp_find_token(s_data, "attack", 0);
@@ -1147,7 +1154,9 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
   if(par){
 
      //log_mpidump("the bit flipping is   x", bit_flip_index);
-     rc = fault_sign (sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo);
+     rc = fault_sign (sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo, sig_k);
+
+     log_mpidump("sig k dopo is    e", sig_k);
     
   }
   //otherwise call the normal signature
@@ -1163,8 +1172,9 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
       log_mpidump ("dsa_sign  sig_s", sig_s);
     }
 
-
-  rc = sexp_build (r_sig, NULL, "(sig-val(dsa(r%M)(s%M)))", sig_r, sig_s);
+   
+  rc = sexp_build (r_sig, NULL, "(sig-val(dsa(r%M)(s%M)(k%M)))", sig_r, sig_s, sig_k);
+ 
 
  leave:
   _gcry_mpi_release (sig_r);
