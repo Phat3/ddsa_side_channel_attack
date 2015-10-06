@@ -49,7 +49,7 @@ int main( int argc , char * argv[]){
     gcry_sexp_t dsa_pub_key;
     gcry_sexp_t ciphertext , plaintext, ptx2;
     
-    gcry_sexp_t r_param, r_tilda_param;
+    gcry_sexp_t r_param, r_tilda_param, k_tilda_param;
     gcry_sexp_t s_param, s_tilda_param;
     gcry_sexp_t g_param;
     gcry_sexp_t p_param;
@@ -60,13 +60,13 @@ int main( int argc , char * argv[]){
     gcry_mpi_t msg_digest;
     
     
-    gcry_mpi_t r , r_tilda;
+    gcry_mpi_t r , r_tilda, k_tilda;
     gcry_mpi_t s , s_tilda;
     gcry_mpi_t g;
     gcry_mpi_t p;
     gcry_mpi_t q;
 
-    int n = 1103 , i=0; // size of the file in which we have the dsa keys 
+    int n = 1101 , i=0; // size of the file in which we have the dsa keys 
     
     
     /* Let's retreive the key from the file */
@@ -112,6 +112,7 @@ int main( int argc , char * argv[]){
     
     err = gcry_pk_sign(&ciphertext, plaintext, dsa_key_pair);
 
+
     //now let's convert the s-expression representing r into an MPI in order
     //to use it in the equation of the attack 
 
@@ -135,14 +136,12 @@ int main( int argc , char * argv[]){
     q_param = gcry_sexp_find_token(dsa_key_pair, "q", 0);
     q = gcry_sexp_nth_mpi ( q_param , 1, GCRYMPI_FMT_USG);
 
-
-
+    
     //*************** FAULTY SIGNATURE ********************//
 
     err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack))" , "sha1", 20 , msg_digest);
 
     err = gcry_pk_sign(&ciphertext, ptx2, dsa_key_pair);
-
 
     s_tilda_param = gcry_sexp_find_token(ciphertext, "s", 0);
     s_tilda = gcry_sexp_nth_mpi ( s_tilda_param , 1, GCRYMPI_FMT_USG);
@@ -150,15 +149,24 @@ int main( int argc , char * argv[]){
     r_tilda_param = gcry_sexp_find_token(ciphertext, "r", 0);
     r_tilda = gcry_sexp_nth_mpi ( r_tilda_param , 1, GCRYMPI_FMT_USG);
 
-    printf("R TILDA\n");
-    gcry_mpi_dump(r_tilda);
+    k_tilda_param = gcry_sexp_find_token(ciphertext, "k", 0);
+    k_tilda = gcry_sexp_nth_mpi ( k_tilda_param , 1, GCRYMPI_FMT_USG);
+
+    gcry_mpi_t eight = mpi_set_ui(NULL, 8);
+
+    gcry_mpi_t result = gcry_mpi_new(mpi_get_nbits(r));
+
+    gcry_mpi_addm(k_tilda, k_tilda, eight, q);
+    //gcry_mpi_mod(g, g, q);
+
+    gcry_mpi_powm(result, g, k_tilda, p);
+    gcry_mpi_mod(result, result, q);
+
+    printf("R CALCOLATO\n");
+    gcry_mpi_dump(result);
     printf("\n");
 
-    printf("NEW KEY PAIR\n");
-
-    fflush(stdout);
-
-
+/*é
     gcry_mpi_t g2iminus = gcry_mpi_new(mpi_get_nbits(p));
     gcry_mpi_t g2i = gcry_mpi_new(mpi_get_nbits(p));
     gcry_mpi_t res = gcry_mpi_new(mpi_get_nbits(q));
@@ -180,6 +188,7 @@ int main( int argc , char * argv[]){
     printf("RESULT\n");
     gcry_mpi_dump(res);
     printf("\n");
+    */
 
 
 }
