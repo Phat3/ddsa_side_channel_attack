@@ -154,13 +154,16 @@ int main( int argc , char * argv[]){
 
     gcry_mpi_t eight = mpi_set_ui(NULL, 8);
 
+    gcry_mpi_t p1 = gcry_mpi_new(mpi_get_nbits(p));
+
     gcry_mpi_t result = gcry_mpi_new(mpi_get_nbits(r));
 
-    gcry_mpi_addm(k_tilda, k_tilda, eight, q);
-    //gcry_mpi_mod(g, g, q);
+    gcry_mpi_sub(p1,p,eight);
 
-    gcry_mpi_powm(result, g, k_tilda, p);
-    gcry_mpi_mod(result, result, q);
+    gcry_mpi_powm(g,g,p1,q);
+
+    gcry_mpi_mulm(result,r,g,q)
+
 
     printf("R CALCOLATO\n");
     gcry_mpi_dump(result);
