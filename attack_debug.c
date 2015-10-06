@@ -8,40 +8,6 @@
  * */
 int main( int argc , char * argv[]){
 	
-/*
-     
-    gcry_mpi_t minustwoi = gcry_mpi_new(3);
-    gcry_mpi_t invtwoi = gcry_mpi_new(3);
-    gcry_mpi_t twoi = gcry_mpi_new(3);
-
-    gcry_mpi_t res =  gcry_mpi_new(3);
-
-    gcry_mpi_t one = gcry_mpi_set_ui(NULL, 1);
-    gcry_mpi_t two = gcry_mpi_set_ui(NULL, 2);
-
-
-    gcry_mpi_t four = gcry_mpi_set_ui(NULL, 5);
-
-    //gcry_mpi_mul_2exp(minustwoi, one, -2);
-    gcry_mpi_invm(invtwoi, two, four);
-    printf("inv\n");
-    gcry_mpi_dump(invtwoi);
-    gcry_mpi_powm(minustwoi, invtwoi, two, four);
-    gcry_mpi_mul_2exp(twoi, one, 2);
-
-    printf("minustwoi\n");
-    gcry_mpi_dump(minustwoi);
-
-    printf("twoi\n");
-    gcry_mpi_dump(twoi);
-
-
-    gcry_mpi_mulm(res, minustwoi, twoi, four);
-    printf("RESULT\n");
-    gcry_mpi_dump(res);
-    printf("\n");
-
-*/
 
     void* dsa_buf; 
     
@@ -154,44 +120,19 @@ int main( int argc , char * argv[]){
 
     gcry_mpi_t eight = mpi_set_ui(NULL, 8);
 
-    gcry_mpi_t p1 = gcry_mpi_new(mpi_get_nbits(p));
-
     gcry_mpi_t result = gcry_mpi_new(mpi_get_nbits(r));
 
-    gcry_mpi_sub(p1,p,eight);
+    gcry_mpi_powm(g,g,eight,p);  //g^8 mod p (g^(2^3) mod p)
 
-    gcry_mpi_powm(g,g,p1,q);
+    gcry_mpi_invm(g,g,p);    //g^-8 mod p
 
-    gcry_mpi_mulm(result,r,g,q)
+    gcry_mpi_mod(g,g,q);    //(g^-8 mod p) mod q
 
+    gcry_mpi_mulm(result, r, g, q);   //r*g^-8 mod q == r_tilda
 
-    printf("R CALCOLATO\n");
+    printf("R_tilda CALCOLATO\n");
     gcry_mpi_dump(result);
     printf("\n");
-
-/*é
-    gcry_mpi_t g2iminus = gcry_mpi_new(mpi_get_nbits(p));
-    gcry_mpi_t g2i = gcry_mpi_new(mpi_get_nbits(p));
-    gcry_mpi_t res = gcry_mpi_new(mpi_get_nbits(q));
-
-    gcry_mpi_t one = gcry_mpi_set_ui(NULL, 1);
-
-    gcry_mpi_t twoi = gcry_mpi_new(3);
-    gcry_mpi_mul_2exp(twoi, one, 3);
-
-    gcry_mpi_powm(g2i, g, twoi, p);
-    gcry_mpi_mod(res, g2i, q);
-
-    //gcry_mpi_invm(g2iminus, g2i, q);
-
-
-    gcry_mpi_mulm(g2iminus, r, g2i, p);
-    gcry_mpi_mod(res, g2iminus, q);
-
-    printf("RESULT\n");
-    gcry_mpi_dump(res);
-    printf("\n");
-    */
 
 
 }
