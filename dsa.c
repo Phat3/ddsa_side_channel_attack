@@ -1046,18 +1046,18 @@ fault_sign (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
 
   //****************** FAULT *********************//
 
-  gcry_mpi_t one = mpi_set_ui(NULL, 1);
+  gcry_mpi_t one = mpi_set_ui(NULL, 1);   //1
 
   //calculat 2^i ()
   gcry_mpi_t e = mpi_new(4);
-  mpi_mul_2exp(e, one, 3);
+  mpi_mul_2exp(e, one, 3);   // e = 2^i ---> in this example e = 2^3
 
   log_mpidump("e is   e", e);
 
   gcry_mpi_t k_tilde = mpi_new(qbits);
 
   //damage the k
-  mpi_subm(k_tilde,k,e,skey->q);
+  mpi_subm(k_tilde,k,e,skey->q);  //k_tilda = k - 2^i mod q
 
   log_mpidump("kfault is   x", k_tilde);
 
@@ -1065,9 +1065,8 @@ fault_sign (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
   mpi_mul(sig_k, k_tilde, one);
   
   /* r = (a^k mod p) mod q */
-  mpi_powm( r, skey->g, k_tilde, skey->p );
-
-  mpi_fdiv_r( r, r, skey->q );
+  mpi_powm( r, skey->g, k_tilde, skey->p );   //r = g^k_tilda mod p ----> g^(k - 2^i) mod p
+  mpi_fdiv_r( r, r, skey->q );    //r = (g^k_tilda mod p) mod q ----> (g^(k - 2^i) mod p) mod q
 
   log_mpidump("rfault is   r", r);
 

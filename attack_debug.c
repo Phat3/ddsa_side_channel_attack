@@ -122,15 +122,13 @@ int main( int argc , char * argv[]){
 
     gcry_mpi_t result = gcry_mpi_new(mpi_get_nbits(r));
 
-    gcry_mpi_powm(g,g,eight,p);  //g^8 mod p (g^(2^3) mod p)
+    gcry_mpi_powm(g,g,eight,p);  //g^8 mod p --------> (g^(2^3) mod p)
 
-    //gcry_mpi_invm(g,g,p);    //g^-8 mod p
+    gcry_mpi_mod(g,g,q);    //(g^(2^3) mod p) mod q
 
-    gcry_mpi_mod(g,g,q);    //(g^-8 mod p) mod q
+    gcry_mpi_mulm(result, r_tilda, g, q);   //r_tilda * g^(2^3) mod p mod q == r   -------> r_tilda = ( g^k_tilda mod p ) mod q  =  ( g^(k - 2^3) mod p ) mod q
 
-    gcry_mpi_mul(result, r_tilda, g, q);   //r_tilda * g^(2^3) == r
-
-    printf("R_tilda CALCOLATO\n");
+    printf("R CALCULED\n");
     gcry_mpi_dump(result);
     printf("\n");
 
