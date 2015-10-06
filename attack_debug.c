@@ -118,11 +118,17 @@ int main( int argc , char * argv[]){
     k_tilda_param = gcry_sexp_find_token(ciphertext, "k", 0);
     k_tilda = gcry_sexp_nth_mpi ( k_tilda_param , 1, GCRYMPI_FMT_USG);
 
-    gcry_mpi_t eight = mpi_set_ui(NULL, 8);
+
+    //POC
+
+    gcry_mpi_t one = mpi_set_ui(NULL, 1);   //1
+
+    gcry_mpi_t e = mpi_new(4);
+    mpi_mul_2exp(e, one, 3);   // e = 2^i ---> in this example e = 2^3
 
     gcry_mpi_t result = gcry_mpi_new(mpi_get_nbits(r));
 
-    gcry_mpi_powm(g,g,eight,p);  //g^8 mod p --------> (g^(2^3) mod p)
+    gcry_mpi_powm(g,g,e,p);  //g^8 mod p --------> (g^(2^3) mod p)
 
     gcry_mpi_mod(g,g,q);    //(g^(2^3) mod p) mod q
 
