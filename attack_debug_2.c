@@ -15,7 +15,7 @@ int main( int argc , char * argv[]){
     gcry_sexp_t dsa_pub_key;
     gcry_sexp_t ciphertext , plaintext, ptx2;
     
-    gcry_sexp_t r_param, r_tilda_param, k_tilda_param;
+    gcry_sexp_t r_param, r_tilda_param, k_tilda_param, x_param;
     gcry_sexp_t s_param, s_tilda_param;
     gcry_sexp_t g_param;
     gcry_sexp_t p_param;
@@ -26,7 +26,7 @@ int main( int argc , char * argv[]){
     gcry_mpi_t msg_digest;
     
     
-    gcry_mpi_t r , r_tilda, k_tilda;
+    gcry_mpi_t r , x, r_tilda, k_tilda;
     gcry_mpi_t s , s_tilda;
     gcry_mpi_t g;
     gcry_mpi_t p;
@@ -75,6 +75,21 @@ int main( int argc , char * argv[]){
     err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", 20 , msg_digest);
     
     err = gcry_pk_sign(&ciphertext, plaintext, dsa_key_pair);
+
+    x_param = gcry_sexp_find_token(dsa_key_pair, "x", 0);
+    x = gcry_sexp_nth_mpi ( x_param , 1, GCRYMPI_FMT_USG);
+
+    printf("X\n");
+    gcry_mpi_dump(x);
+    printf("\n");
+
+    x_param = gcry_sexp_find_token(plaintext, "hash", 0);
+    x = gcry_sexp_nth_mpi ( x_param , 2, GCRYMPI_FMT_USG);
+
+    printf("DIGEST\n");
+    gcry_mpi_dump(x);
+    printf("\n");
+
 
 
     //now let's convert the s-expression representing r into an MPI in order
@@ -142,6 +157,14 @@ int main( int argc , char * argv[]){
     printf("\n");
 
 
+    gcry_mpi_mulm(result, s, result,q);
+    gcry_mpi_subm(result, result, x, q);
+    gcry_mpi_invm(r,r,q);
+    gcry_mpi_mulm(result, result,r,q);
+
+    printf("X RECONSTRUCTED\n");
+    gcry_mpi_dump(result);
+    printf("\n");
 
     //POC
     /*

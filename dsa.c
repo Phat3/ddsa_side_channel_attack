@@ -1162,8 +1162,6 @@ fault_sign_2 (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey
   gcry_mpi_t e = mpi_new(4);
   mpi_mul_2exp(e, one, 3);   // e = 2^i ---> in this example e = 2^3
 
-  log_mpidump("e is   e", e);
-
   gcry_mpi_t k_tilde = mpi_new(mpi_get_nlimbs(k));
 
   //damage the k
@@ -1175,6 +1173,8 @@ fault_sign_2 (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey
   /* kinv = k^(-1) mod q */
   kinv = mpi_alloc( mpi_get_nlimbs(k) );
   mpi_invm(kinv, k_tilde, skey->q );
+
+  log_mpidump("hash is   hash", hash);
 
   //****************** END FAULT *********************//
 
