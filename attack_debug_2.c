@@ -146,6 +146,8 @@ int main( int argc , char * argv[]){
     gcry_mpi_t s_tilda2 = gcry_mpi_new(mpi_get_nbits(q));
 
     //POC
+
+    //retrieve k
     gcry_mpi_mulm(s_tilda2, s_tilda, e, q); // s_tilda*(2^3) modq q
     gcry_mpi_subm(s_tilda2, s_tilda2, q, q); // q - s_tilda*(2^3)  mod q   ------>  this is equivalent to -s_tilda(2^3) mod q
     gcry_mpi_subm(result, s_tilda, s, q); // s_tilda - s mod q
@@ -156,35 +158,17 @@ int main( int argc , char * argv[]){
     gcry_mpi_dump(result);
     printf("\n");
 
-
-    gcry_mpi_mulm(result, s, result,q);
-    gcry_mpi_subm(result, result, x, q);
-    gcry_mpi_invm(r,r,q);
-    gcry_mpi_mulm(result, result,r,q);
+    //retrieve x
+    gcry_mpi_mulm(result, s, result,q); // s*k mod q
+    gcry_mpi_subm(result, result, x, q); // s*k - m mod q
+    gcry_mpi_invm(r,r,q); // r^-1
+    gcry_mpi_mulm(result, result,r,q); //(s*k -m)*r^-1 mod q
 
     printf("X RECONSTRUCTED\n");
-    gcry_mpi_dump(result);
+    gcry_mpi_dump(result);   //WORKING!!
     printf("\n");
 
-    //POC
-    /*
-    gcry_mpi_t one = mpi_set_ui(NULL, 1);   //1
 
-    gcry_mpi_t e = mpi_new(4);
-    mpi_mul_2exp(e, one, 3);   // e = 2^i ---> in this example e = 2^3
-
-    gcry_mpi_t result = gcry_mpi_new(mpi_get_nbits(r));
-
-    gcry_mpi_powm(g,g,e,p);  //g^8 mod p --------> (g^(2^3) mod p)
-
-    gcry_mpi_mod(g,g,q);    //(g^(2^3) mod p) mod q
-
-    gcry_mpi_mulm(result, r_tilda, g, q);   //r_tilda * g^(2^3) mod p mod q == r   -------> r_tilda = ( g^k_tilda mod p ) mod q  =  ( g^(k - 2^3) mod p ) mod q
-
-    printf("R CALCULED\n");
-    gcry_mpi_dump(result);
-    printf("\n");
-    */
 
 
 }
