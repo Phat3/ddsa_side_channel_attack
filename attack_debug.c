@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <gcrypt.h>
 
+
+#define DEBUG_MPI_PRINT(mpi,msg) { printf("%s\n", msg); gcry_mpi_dump(mpi); printf("\n"); }
+
 /*
  * This is an implementation of the 
  * ddsa algorithm as specified in rfc6979 
@@ -90,6 +93,9 @@ int main( int argc , char * argv[]){
     s_param = gcry_sexp_find_token(ciphertext, "s", 0);
     s = gcry_sexp_nth_mpi ( s_param , 1, GCRYMPI_FMT_USG);
 
+    DEBUG_MPI_PRINT(r,"R RIGHT");
+
+    DEBUG_MPI_PRINT(s,"S RIGHT");
 
     //--------- PUB KEY --------------
     
@@ -101,6 +107,12 @@ int main( int argc , char * argv[]){
     
     q_param = gcry_sexp_find_token(dsa_key_pair, "q", 0);
     q = gcry_sexp_nth_mpi ( q_param , 1, GCRYMPI_FMT_USG);
+
+    DEBUG_MPI_PRINT(g,"g");
+
+    DEBUG_MPI_PRINT(p,"p");
+
+    DEBUG_MPI_PRINT(q,"q");
 
     
     //*************** FAULTY SIGNATURE ********************//
@@ -118,6 +130,12 @@ int main( int argc , char * argv[]){
     k_tilda_param = gcry_sexp_find_token(ciphertext, "k", 0);
     k_tilda = gcry_sexp_nth_mpi ( k_tilda_param , 1, GCRYMPI_FMT_USG);
 
+    DEBUG_MPI_PRINT(r_tilda,"R TILDA");
+
+    DEBUG_MPI_PRINT(s_tilda,"S TILDA");
+
+    DEBUG_MPI_PRINT(k_tilda,"K RIGHT");
+
 
     //POC
 
@@ -126,7 +144,7 @@ int main( int argc , char * argv[]){
     gcry_mpi_t e = mpi_new(4);
     mpi_mul_2exp(e, one, 3);   // e = 2^i ---> in this example e = 2^3
 
-    gcry_mpi_t result = gcry_mpi_new(mpi_get_nbits(r));
+    gcry_mpi_t result = gcry_mpi_new(mpi_get_nbits(p));
 
     gcry_mpi_powm(g,g,e,p);  //g^8 mod p --------> (g^(2^3) mod p)
 
@@ -134,9 +152,7 @@ int main( int argc , char * argv[]){
 
     gcry_mpi_mulm(result, r_tilda, g, q);   //r_tilda * g^(2^3) mod p mod q == r   -------> r_tilda = ( g^k_tilda mod p ) mod q  =  ( g^(k - 2^3) mod p ) mod q
 
-    printf("R CALCULED\n");
-    gcry_mpi_dump(result);
-    printf("\n");
+    DEBUG_MPI_PRINT(result,"R CALCULATED");
 
 
 }

@@ -1,10 +1,5 @@
 #include <stdio.h>
-#include <string.h>
 #include <gcrypt.h>
-
-#define DEBUG_MPI_PRINT(mpi,msg) { printf("%s\n", msg); gcry_mpi_dump(mpi); printf("\n"); }
-
-#define DEBUG_SEXP_PRINT(sexp,msg) { printf("%s\n", msg); gcry_sexp_dump(sexp); printf("\n"); }
 
 /*
  * This is an implementation of the 
@@ -20,7 +15,7 @@ int main( int argc , char * argv[]){
     gcry_sexp_t dsa_pub_key;
     gcry_sexp_t ciphertext , plaintext, ptx2;
     
-    gcry_sexp_t r_param, r_tilda_param, k_tilda_param, x_param;
+    gcry_sexp_t r_param, r_tilda_param, x_param;
     gcry_sexp_t s_param, s_tilda_param;
     gcry_sexp_t g_param;
     gcry_sexp_t p_param;
@@ -31,7 +26,7 @@ int main( int argc , char * argv[]){
     gcry_mpi_t msg_digest;
     
     
-    gcry_mpi_t r , x, r_tilda, k_tilda;
+    gcry_mpi_t r , x, r_tilda;
     gcry_mpi_t s , s_tilda;
     gcry_mpi_t g;
     gcry_mpi_t p;
@@ -64,23 +59,24 @@ int main( int argc , char * argv[]){
         puts("Error");
     }
 
+    gcry_sexp_dump(dsa_key_pair);
+
     
    //----------------------------------------
     
    //digest of "Hello world." 
     const unsigned char* digest = (const unsigned char * ) "e44f3364019d18a151cab7072b5a40bb5b3e274f";
     
+    err = gcry_mpi_scan(&msg_digest, GCRYMPI_FMT_USG, digest, 
+                        strlen((const char*) digest), NULL);
 
     //*************** CORRECT SIGNATURE ********************//
 
-    //40 is the mdlen of sha1 as specified in https://lists.gnupg.org/pipermail/gnupg-devel/2013-September/027916.html
-    err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", strlen(digest) , digest);
-
-    DEBUG_SEXP_PRINT(plaintext,"DOPO SCAN SEXP");
+    //20 is the mdlen of sha1 as specified in https://lists.gnupg.org/pipermail/gnupg-devel/2013-September/027916.html
+    //a well formatted number for the immaediate has an even number of digits
+    err = gcry_sexp_build(&plaintext, NULL, "(data (flags raw) (value %m) )" , msg_digest);
     
     err = gcry_pk_sign(&ciphertext, plaintext, dsa_key_pair);
-
-    DEBUG_SEXP_PRINT(ciphertext,"CIPHER");
 
     x_param = gcry_sexp_find_token(dsa_key_pair, "x", 0);
     x = gcry_sexp_nth_mpi ( x_param , 1, GCRYMPI_FMT_USG);
@@ -89,8 +85,8 @@ int main( int argc , char * argv[]){
     gcry_mpi_dump(x);
     printf("\n");
 
-    x_param = gcry_sexp_find_token(plaintext, "hash", 0);
-    x = gcry_sexp_nth_mpi ( x_param , 2, GCRYMPI_FMT_USG);
+    x_param = gcry_sexp_find_token(plaintext, "value", 0);
+    x = gcry_sexp_nth_mpi ( x_param , 1, GCRYMPI_FMT_USG);
 
     printf("DIGEST\n");
     gcry_mpi_dump(x);
@@ -123,7 +119,8 @@ int main( int argc , char * argv[]){
     
     //*************** FAULTY SIGNATURE ********************//
 
-    err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", strlen(digest) , digest);
+
+    err = gcry_sexp_build(&ptx2, NULL, "(data (flags raw) (value %m) (attack2))" , msg_digest);
 
     err = gcry_pk_sign(&ciphertext, ptx2, dsa_key_pair);
 
@@ -133,23 +130,18 @@ int main( int argc , char * argv[]){
     r_tilda_param = gcry_sexp_find_token(ciphertext, "r", 0);
     r_tilda = gcry_sexp_nth_mpi ( r_tilda_param , 1, GCRYMPI_FMT_USG);
 
-    k_tilda_param = gcry_sexp_find_token(ciphertext, "k", 0);
-    k_tilda = gcry_sexp_nth_mpi ( k_tilda_param , 1, GCRYMPI_FMT_USG);
-
-    printf("K\n");
-    gcry_mpi_t eight = mpi_set_ui(NULL, 8);
-    gcry_mpi_add(k_tilda, k_tilda, eight);
-    gcry_mpi_dump(k_tilda);
-    printf("\n");
 
     gcry_mpi_t one = mpi_set_ui(NULL, 1);
 
     gcry_mpi_t e = mpi_new(4);
     mpi_mul_2exp(e, one, 3);   // e = 2^i ---> in this example e = 2^3
 
-    gcry_mpi_t result = gcry_mpi_new(mpi_get_nbits(s));
 
-    gcry_mpi_t s_tilda2 = gcry_mpi_new(mpi_get_nbits(q));
+    gcry_mpi_t result = gcry_mpi_new(gcry_mpi_get_nbits(s));
+
+    gcry_mpi_t s_tilda2 = gcry_mpi_new(gcry_mpi_get_nbits(q));
+
+
 
     //POC
 

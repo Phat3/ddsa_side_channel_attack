@@ -1174,7 +1174,7 @@ fault_sign_2 (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey
   kinv = mpi_alloc( mpi_get_nlimbs(k) );
   mpi_invm(kinv, k_tilde, skey->q );
 
-  log_mpidump("hash is   hash", hash);
+  //log_mpidump("hash is   hash", hash);
 
   //****************** END FAULT *********************//
 
