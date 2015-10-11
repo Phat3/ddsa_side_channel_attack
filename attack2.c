@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <gcrypt.h>
 
 
@@ -65,19 +66,26 @@ int main( int argc , char * argv[]){
 	}
 
     
-   //----------------------------------------
+    //*************** HASH THE MESSAGE ********************//
     
-   //digest of "Hello world." 
-    const unsigned char* digest = (const unsigned char * ) "e44f3364019d18a151cab7072b5a40bb5b3e274f";
-    
-    err = gcry_mpi_scan(&msg_digest, GCRYMPI_FMT_USG, digest, 
-                        strlen((const char*) digest), NULL);
+    const unsigned char* message = (const unsigned char * ) "Hello world.";
+
+    //get the hash_len of sha-1
+    int hash_len_bytes = gcry_md_get_algo_dlen(GCRY_MD_SHA1);
+
+    unsigned char digest[hash_len_bytes];
+
+    //calculate the hash in the binary representation
+    //the gcry_sexp_build requires the binary representation of the hash (20 bytes long)
+    //the ascii and the hex representations are 40 bytes long and this broke the HMAC computation when you try to sign your message 
+    gcry_md_hash_buffer(GCRY_MD_SHA1, digest, message, strlen(message));
+
 
     //*************** CORRECT SIGNATURE ********************//
 
 	//20 is the mdlen of sha1 as specified in https://lists.gnupg.org/pipermail/gnupg-devel/2013-September/027916.html
     //a well formatted number for the immaediate has an even number of digits
-    err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", 20 , msg_digest);
+    err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", hash_len_bytes , digest);
 	
 	err = gcry_pk_sign(&ciphertext, plaintext, dsa_key_pair);
 
@@ -122,7 +130,7 @@ int main( int argc , char * argv[]){
 
     //*************** FAULTY SIGNATURE ********************//
 
-    err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", 20 , msg_digest);
+    err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", hash_len_bytes , digest);
 
     err = gcry_pk_sign(&ctx2, ptx2, dsa_key_pair);
 
@@ -145,7 +153,7 @@ int main( int argc , char * argv[]){
 
     unsigned long e = 0;
 
-    int hash_len = 160;
+    int hash_len_bits = hash_len_bytes*8;
 
     gcry_mpi_t one = gcry_mpi_set_ui(NULL, 1);
 
@@ -155,7 +163,7 @@ int main( int argc , char * argv[]){
 
     gcry_mpi_invm(r,r,q); // r^-1
     
-    for(e = 0; e < hash_len; e++){
+    for(e = 0; e < hash_len_bits; e++){
 
         gcry_mpi_t twoi = gcry_mpi_new(e);
         gcry_mpi_mul_2exp(twoi, one, e);   // twoi = 2^e
@@ -211,7 +219,7 @@ int main( int argc , char * argv[]){
     printf("-----------------------------------------\n");
 
     /*
-    for(e = 0; e < hash_len; e++){
+    for(e = 0; e < hash_len_bits; e++){
 
         gcry_mpi_t twoi = gcry_mpi_new(e);
         gcry_mpi_mul_2exp(twoi, one, e);   // twoi = 2^e
