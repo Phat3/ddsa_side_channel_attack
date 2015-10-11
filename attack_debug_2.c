@@ -6,6 +6,20 @@
 
 #define DEBUG_SEXP_PRINT(sexp,msg) { printf("%s\n", msg); gcry_sexp_dump(sexp); printf("\n"); }
 
+//DEBUG
+void print_hash(unsigned char* digest, int hash_len){
+    //the hex representation has twice the length of the binary representation
+    char *out = (char *) malloc( sizeof(char) * ((hash_len*2)+1) ); 
+    char *pointer = out;
+    int j;
+    for ( j = 0; j < hash_len; j++, pointer += 2 ) {
+        snprintf ( pointer, 3, "%02x", digest[j] );
+    }
+
+    printf( "HEX REP: %s\n", out );
+    free( out );
+}
+
 /*
  * This is an implementation of the 
  * ddsa algorithm as specified in rfc6979 
@@ -67,14 +81,27 @@ int main( int argc , char * argv[]){
     
    //----------------------------------------
     
-   //digest of "Hello world." 
-    const unsigned char* digest = (const unsigned char * ) "e44f3364019d18a151cab7072b5a40bb5b3e274f";
-    
+    //*************** HASH THE MASSAGE ********************//
+
+    const unsigned char* message = (const unsigned char * ) "Hello world.";
+
+    //get the hash_len of sha-1
+    int hash_len = gcry_md_get_algo_dlen(GCRY_MD_SHA1);
+
+    unsigned char digest[hash_len];
+
+    //calculate the hash in the binary representation
+    //the gcry_sexp_build requires the binary representation of the hash (20 bytes long)
+    //the ascii and the hex representations are 40 bytes long and this broke the HMAC computation when you try to sign your message 
+    gcry_md_hash_buffer(GCRY_MD_SHA1, digest, message, strlen(message));
+
+    //DEBUG --IT WORKS--
+    print_hash(digest,hash_len);
 
     //*************** CORRECT SIGNATURE ********************//
 
-    //40 is the mdlen of sha1 as specified in https://lists.gnupg.org/pipermail/gnupg-devel/2013-September/027916.html
-    err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", strlen(digest) , digest);
+    //20 is the mdlen of sha1 as specified in https://lists.gnupg.org/pipermail/gnupg-devel/2013-September/027916.html
+    err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", hash_len , digest);
 
     DEBUG_SEXP_PRINT(plaintext,"DOPO SCAN SEXP");
     
@@ -123,7 +150,7 @@ int main( int argc , char * argv[]){
     
     //*************** FAULTY SIGNATURE ********************//
 
-    err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", strlen(digest) , digest);
+    err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", 20 , digest);
 
     err = gcry_pk_sign(&ciphertext, ptx2, dsa_key_pair);
 
