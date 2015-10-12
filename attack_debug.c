@@ -18,7 +18,7 @@ int main( int argc , char * argv[]){
     gcry_sexp_t dsa_pub_key;
     gcry_sexp_t ciphertext , plaintext, ptx2;
     
-    gcry_sexp_t r_param, r_tilda_param, k_tilda_param;
+    gcry_sexp_t r_param, r_tilda_param, k_tilda_param, msg_digest_param;
     gcry_sexp_t s_param, s_tilda_param;
     gcry_sexp_t g_param;
     gcry_sexp_t p_param;
@@ -67,17 +67,23 @@ int main( int argc , char * argv[]){
     
    //----------------------------------------
     
-   //digest of "Hello world." 
-    const unsigned char* digest = (const unsigned char * ) "e44f3364019d18a151cab7072b5a40bb5b3e274f";
-    
-    err = gcry_mpi_scan(&msg_digest, GCRYMPI_FMT_USG, digest, 
-                        strlen((const char*) digest), NULL);
+    const unsigned char* message = (const unsigned char * ) "Hello world.";
+
+    //get the hash_len of sha-1
+    int hash_len = gcry_md_get_algo_dlen(GCRY_MD_SHA1);
+
+    unsigned char digest[hash_len];
+
+    //calculate the hash in the binary representation
+    //the gcry_sexp_build requires the binary representation of the hash (20 bytes long)
+    //the ascii and the hex representations are 40 bytes long and this broke the HMAC computation when you try to sign your message 
+    gcry_md_hash_buffer(GCRY_MD_SHA1, digest, message, strlen(message));
 
     //*************** CORRECT SIGNATURE ********************//
 
     //20 is the mdlen of sha1 as specified in https://lists.gnupg.org/pipermail/gnupg-devel/2013-September/027916.html
     //a well formatted number for the immaediate has an even number of digits
-    err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", 20 , msg_digest);
+    err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", hash_len , digest);
     
     err = gcry_pk_sign(&ciphertext, plaintext, dsa_key_pair);
 
@@ -108,16 +114,21 @@ int main( int argc , char * argv[]){
     q_param = gcry_sexp_find_token(dsa_key_pair, "q", 0);
     q = gcry_sexp_nth_mpi ( q_param , 1, GCRYMPI_FMT_USG);
 
+    msg_digest_param = gcry_sexp_find_token(plaintext, "hash", 0);
+    msg_digest = gcry_sexp_nth_mpi ( msg_digest_param , 2, GCRYMPI_FMT_USG);
+
     DEBUG_MPI_PRINT(g,"g");
 
     DEBUG_MPI_PRINT(p,"p");
 
     DEBUG_MPI_PRINT(q,"q");
 
+    DEBUG_MPI_PRINT(msg_digest,"message digest");
+
     
     //*************** FAULTY SIGNATURE ********************//
 
-    err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack))" , "sha1", 20 , msg_digest);
+    err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack))" , "sha1", hash_len , digest);
 
     err = gcry_pk_sign(&ciphertext, ptx2, dsa_key_pair);
 
@@ -137,22 +148,31 @@ int main( int argc , char * argv[]){
     DEBUG_MPI_PRINT(k_tilda,"K RIGHT");
 
 
-    //POC
+    //POC 
 
-    gcry_mpi_t one = mpi_set_ui(NULL, 1);   //1
+    // 1 - choose a message
+    // 2 - do the correct sign and obtain s and r
+    // 3 - do the faulty sign and obtain s_tilda and r_tilda
 
-    gcry_mpi_t e = mpi_new(4);
-    mpi_mul_2exp(e, one, 3);   // e = 2^i ---> in this example e = 2^3
+    gcry_mpi_t tmp = gcry_mpi_new(mpi_get_nbits(p));
 
     gcry_mpi_t result = gcry_mpi_new(mpi_get_nbits(p));
 
-    gcry_mpi_powm(g,g,e,p);  //g^8 mod p --------> (g^(2^3) mod p)
+    gcry_mpi_subm(tmp, s_tilda, s,q);   //s-tilda -s mod q
 
-    gcry_mpi_mod(g,g,q);    //(g^(2^3) mod p) mod q
+    gcry_mpi_mulm(msg_digest, msg_digest, tmp, q);  //m* (s-tilda -s mod q) mod q
 
-    gcry_mpi_mulm(result, r_tilda, g, q);   //r_tilda * g^(2^3) mod p mod q == r   -------> r_tilda = ( g^k_tilda mod p ) mod q  =  ( g^(k - 2^3) mod p ) mod q
+    gcry_mpi_mulm(tmp, r_tilda, s, q);  //r_tilda - s mod q
 
-    DEBUG_MPI_PRINT(result,"R CALCULATED");
+    gcry_mpi_mulm(result, s_tilda, r, q);    //s_tilda - r mod q
+
+    gcry_mpi_subm(result, tmp, result, q);  //(r_tilda - s mod q) - (s_tilda - r mod q) mod q
+
+    gcry_mpi_invm(result,result,q); //((r_tilda - s mod q) - (s_tilda - r mod q) mod q)^-1 mod q
+
+    gcry_mpi_mulm(result, msg_digest, result, q);   //( (m* (s-tilda -s mod q) mod q) * ((r_tilda - s mod q) - (s_tilda - r mod q) mod q)^-1 mod q ) mod q == x (private key)
+
+    DEBUG_MPI_PRINT(result,"X CALCULATED");
 
 
 }

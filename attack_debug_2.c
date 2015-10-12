@@ -32,7 +32,7 @@ int main( int argc , char * argv[]){
     
     gcry_sexp_t dsa_key_pair;
     gcry_sexp_t dsa_pub_key;
-    gcry_sexp_t ciphertext , plaintext, ptx2;
+    gcry_sexp_t ciphertext , plaintext, ptx2, ctx2;
     
     gcry_sexp_t r_param, r_tilda_param, k_tilda_param, x_param;
     gcry_sexp_t s_param, s_tilda_param;
@@ -102,12 +102,8 @@ int main( int argc , char * argv[]){
 
     //20 is the mdlen of sha1 as specified in https://lists.gnupg.org/pipermail/gnupg-devel/2013-September/027916.html
     err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", hash_len , digest);
-
-    DEBUG_SEXP_PRINT(plaintext,"DOPO SCAN SEXP");
     
     err = gcry_pk_sign(&ciphertext, plaintext, dsa_key_pair);
-
-    DEBUG_SEXP_PRINT(ciphertext,"CIPHER");
 
     x_param = gcry_sexp_find_token(dsa_key_pair, "x", 0);
     x = gcry_sexp_nth_mpi ( x_param , 1, GCRYMPI_FMT_USG);
@@ -147,21 +143,33 @@ int main( int argc , char * argv[]){
     q_param = gcry_sexp_find_token(dsa_key_pair, "q", 0);
     q = gcry_sexp_nth_mpi ( q_param , 1, GCRYMPI_FMT_USG);
 
+    DEBUG_MPI_PRINT(g,"g");
+
+    DEBUG_MPI_PRINT(p,"p");
+
+    DEBUG_MPI_PRINT(q,"q");
+
+    DEBUG_MPI_PRINT(r,"r");
+
     
     //*************** FAULTY SIGNATURE ********************//
 
     err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", 20 , digest);
 
-    err = gcry_pk_sign(&ciphertext, ptx2, dsa_key_pair);
+    err = gcry_pk_sign(&ctx2, ptx2, dsa_key_pair);
 
-    s_tilda_param = gcry_sexp_find_token(ciphertext, "s", 0);
+    s_tilda_param = gcry_sexp_find_token(ctx2, "s", 0);
     s_tilda = gcry_sexp_nth_mpi ( s_tilda_param , 1, GCRYMPI_FMT_USG);
 
-    r_tilda_param = gcry_sexp_find_token(ciphertext, "r", 0);
+    r_tilda_param = gcry_sexp_find_token(ctx2, "r", 0);
     r_tilda = gcry_sexp_nth_mpi ( r_tilda_param , 1, GCRYMPI_FMT_USG);
 
-    k_tilda_param = gcry_sexp_find_token(ciphertext, "k", 0);
+    k_tilda_param = gcry_sexp_find_token(ctx2, "k", 0);
     k_tilda = gcry_sexp_nth_mpi ( k_tilda_param , 1, GCRYMPI_FMT_USG);
+
+    DEBUG_MPI_PRINT(r_tilda,"R_tilda");
+
+    DEBUG_MPI_PRINT(k_tilda,"K-tilda");
 
     printf("K\n");
     gcry_mpi_t eight = mpi_set_ui(NULL, 8);
