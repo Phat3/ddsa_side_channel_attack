@@ -38,13 +38,13 @@ int main( int argc , char * argv[]){
 
 	
 	
-	int n = 1101 , i=0; // size of the file in which we have the dsa keys 
+	int n = 1104 , i=0; // size of the file in which we have the dsa keys 
 	
 	
 	/* Let's retreive the key from the file */
 	//----------------------------------------
 	
-	FILE* lockf = fopen("DSA_KEY", "rb");
+	FILE* lockf = fopen("DSA_KEY_1024", "rb");
     
     if (!lockf) {
         puts("fopen() failed");
@@ -170,10 +170,9 @@ int main( int argc , char * argv[]){
   
     	//retrieve k
         gcry_mpi_mulm(tmp, s_tilda, twoi, q); // s_tilda*(2^e) modq q
-        gcry_mpi_subm(tmp, tmp, q, q); // q - s_tilda*(2^3)  mod q   ------>  this is equivalent to -s_tilda(2^3) mod q
         gcry_mpi_subm(result, s_tilda, s, q); // s_tilda - s mod q
         gcry_mpi_invm(result, result, q); // (s_tilda - s mod q)^-1
-        gcry_mpi_mulm(result,result, tmp, q); // (q) - s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
+        gcry_mpi_mulm(result,result, tmp, q); // s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
 
         printf("K RECONSTRUCTED\n");
         gcry_mpi_dump(result);
@@ -205,11 +204,9 @@ int main( int argc , char * argv[]){
         }
         else{
             puts("----------------------------------------------------------------BECCATO!!");
-        }
-
-         if(e==3){
             exit(0);
         }
+
 
     }
     
@@ -218,22 +215,17 @@ int main( int argc , char * argv[]){
     printf("-----------------------------------------\n");
     printf("-----------------------------------------\n");
 
-    /*
+    
     for(e = 0; e < hash_len_bits; e++){
 
         gcry_mpi_t twoi = gcry_mpi_new(e);
         gcry_mpi_mul_2exp(twoi, one, e);   // twoi = 2^e
-
-        printf("K RECONSTRUCTED\n");
-        gcry_mpi_dump(twoi);
-        printf("\n");
-        
-
+  
         //retrieve k
-        gcry_mpi_mulm(tmp, s_tilda, twoi, q); // s_tilda*(2^e) mod q
-        gcry_mpi_subm(result, s_tilda, s, q); // s_tilda - s mod q
+        gcry_mpi_mulm(tmp, s_tilda, twoi, q); // s_tilda*(2^e) modq q
+        gcry_mpi_subm(result, s, s_tilda, q); // s_tilda - s mod q
         gcry_mpi_invm(result, result, q); // (s_tilda - s mod q)^-1
-        gcry_mpi_mulm(result,result, tmp, q); // (s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
+        gcry_mpi_mulm(result,result, tmp, q); // s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
 
         printf("K RECONSTRUCTED\n");
         gcry_mpi_dump(result);
@@ -265,13 +257,11 @@ int main( int argc , char * argv[]){
         }
         else{
             puts("----------------------------------------------------------------BECCATO!!");
-        }
-        if(e==3){
             exit(0);
         }
 
     }
-    */
+    
 
 }
 
