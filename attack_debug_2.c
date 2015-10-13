@@ -6,6 +6,14 @@
 
 #define DEBUG_SEXP_PRINT(sexp,msg) { printf("%s\n", msg); gcry_sexp_dump(sexp); printf("\n"); }
 
+//get the size of the key file
+int get_file_size(FILE * fp){
+    fseek(fp, 0L, SEEK_END);
+    int size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    return size;
+}
+
 //DEBUG
 void print_hash(unsigned char* digest, int hash_len){
     //the hex representation has twice the length of the binary representation
@@ -51,13 +59,15 @@ int main( int argc , char * argv[]){
     gcry_mpi_t p;
     gcry_mpi_t q;
 
-    int n = 1101 , i=0; // size of the file in which we have the dsa keys 
-    
+    int i=0;
     
     /* Let's retreive the key from the file */
     //----------------------------------------
     
-    FILE* lockf = fopen("DSA_KEY", "rb");
+    FILE* lockf = fopen("DSA_KEY_2048_256", "rb");
+
+    int n = get_file_size(lockf); // size of the file in which we have the dsa keys 
+
     
     if (!lockf) {
         puts("fopen() failed");
