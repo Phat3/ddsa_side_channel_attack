@@ -202,7 +202,7 @@ int main( int argc , char * argv[]){
         }
         else{
             puts("\n[!!!]PRIVATE KEY CRACKED!!\n");
-    	    printf("[DBG] BIT: %d  FAULT: k-2^e\n" , (int)e); //DEBUG 
+    	    printf("[DBG] BIT: %d  FAULT: k-2^e\n" , e); //DEBUG 
             exit(0);
         }
 
