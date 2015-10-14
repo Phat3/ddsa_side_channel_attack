@@ -173,6 +173,12 @@ void attack(int i, unsigned char *digest, int hash_len){
 
 }
 
+
+
+
+
+
+
 int main( int argc , char * argv[]){
 
         

@@ -1107,7 +1107,7 @@ fault_sign (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
   return rc;
 }
 
-//fault_sign for attack 2
+//fault_sign for attack 2 ( bit level ) 
 static gpg_err_code_t
 fault_sign_2 (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
       int flags, int hashalgo,  gcry_mpi_t sig_k , int bit_fault , int sign)
@@ -1212,6 +1212,110 @@ fault_sign_2 (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey
   return rc;
 }
 
+//fault_sign for attack 2 ( byte level ) 
+static gpg_err_code_t
+fault_sign_2_byte (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
+      int flags, int hashalgo,  gcry_mpi_t sig_k , int byte_fault , int value_fault, int sign)
+{
+  gpg_err_code_t rc;
+  gcry_mpi_t hash;
+  gcry_mpi_t k;
+  gcry_mpi_t kinv;
+  gcry_mpi_t tmp;
+  const void *abuf;
+  unsigned int abits, qbits;
+  int extraloops = 0;
+
+  qbits = mpi_get_nbits (skey->q);
+
+  /* Convert the INPUT into an MPI.  */
+  rc = _gcry_dsa_normalize_hash (input, &hash, qbits);
+  if (rc)
+    return rc;
+
+ again:
+  /* Create the K value.  */
+  if ((flags & PUBKEY_FLAG_RFC6979) && hashalgo)
+    {
+      /* Use Pornin's method for deterministic DSA.  If this flag is
+         set, it is expected that HASH is an opaque MPI with the to be
+         signed hash.  That hash is also used as h1 from 3.2.a.  */
+      if (!mpi_is_opaque (input))
+        {
+          rc = GPG_ERR_CONFLICT;
+          goto leave;
+        }
+
+      abuf = mpi_get_opaque (input, &abits);
+      rc = _gcry_dsa_gen_rfc6979_k (&k, skey->q, skey->x,
+                                    abuf, (abits+7)/8, hashalgo, extraloops);
+      if (rc)
+        goto leave;
+    }
+  else
+    {
+      /* Select a random k with 0 < k < q */
+      k = _gcry_dsa_gen_k (skey->q, GCRY_STRONG_RANDOM);
+    }
+
+  /* r = (a^k mod p) mod q */
+  mpi_powm( r, skey->g, k, skey->p );
+  mpi_fdiv_r( r, r, skey->q );
+
+  //****************** FAULT *********************//
+
+  gcry_mpi_t one = mpi_set_ui(NULL, value_fault);   //1
+
+  //calculate 2^i ()
+  gcry_mpi_t e = mpi_new(qbits);
+  mpi_mul_2exp(e, one, byte_fault);   // e = 2^i ---> in this example e = 2^3
+
+  gcry_mpi_t k_tilde = mpi_new(mpi_get_nlimbs(k));
+
+  if(sign==0)
+     mpi_subm(k_tilde,k,e,skey->q);  //k_tilda = k - 2^i mod q
+  else
+     mpi_addm(k_tilde,k,e,skey->q);
+
+  log_mpidump("[ATTACK 3] K_TILDE IS e", k_tilde);
+
+  //DEBUG ---- Pass the value of k fault to our attack program
+  mpi_mul(sig_k, k_tilde, one);
+  
+  /* kinv = k^(-1) mod q */
+  kinv = mpi_alloc( mpi_get_nlimbs(k) );
+  mpi_invm(kinv, k_tilde, skey->q );
+
+  //log_mpidump("hash is   hash", hash);
+
+  //****************** END FAULT *********************//
+
+  /* s = (kinv * ( hash + x * r)) mod q */
+  tmp = mpi_alloc( mpi_get_nlimbs(skey->p) );
+  mpi_mul( tmp, skey->x, r );
+  mpi_add( tmp, tmp, hash );
+  mpi_mulm( s , kinv, tmp, skey->q );
+
+  mpi_free(k);
+  mpi_free(kinv);
+  mpi_free(tmp);
+
+  if (!mpi_cmp_ui (r, 0))
+    {
+      /* This is a highly unlikely code path.  */
+      extraloops++;
+      goto again;
+    }
+
+  rc = 0;
+
+ leave:
+  if (hash != input)
+    mpi_free (hash);
+
+  return rc;
+}
+
 
 
 
@@ -1227,6 +1331,7 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
 
   gcry_sexp_t par;
   gcry_sexp_t par2;
+  gcry_sexp_t par3;
 
 
   gcry_mpi_t sig_k = NULL;
@@ -1265,16 +1370,21 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
   par = _gcry_sexp_find_token(s_data, "attack", 0);
   //get the flag for the attack 2 
   par2 = _gcry_sexp_find_token(s_data, "attack2", 0);
+
+  par3 = _gcry_sexp_find_token(s_data, "attack2_byte", 0);
    
   int qbits = mpi_get_nbits(sk.q);
   //if the flag for the attack 1 is set call the faulty signature that inject the fault the creation of k
+
+
+
+  srand(time(0));
+
+  int i = rand() % qbits;
+
+  int flip = rand() % 2; //randomly chose the fault ( subm/addm to k )
+
   if(par){
-     
-     srand(time(0));
-
-     int i = rand() % qbits;
-
-     int flip = rand() % 2;
 
      printf("random bit fault is %d" , i);
 
@@ -1287,21 +1397,27 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
      //if the flag for the attack 1 is set call the faulty signature that inject the fault the creation of s
      if(par2){
      
-     srand(time(0));
-
-     int i = rand() % qbits;
-
-     int flip = rand() % 2;
-
      printf("random bit fault is %d" , i);
 
      printf("random flip is %d" , i);
         rc = fault_sign_2(sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo, sig_k , i , flip);
         log_mpidump("[ATTACK 2]  sig k dopo is    e", sig_k);
      }
-      //otherwise call the normal signature
+     
      else{
+
+ 	if(par3){
+	
+	int j = rand() % 256;
+
+	rc = fault_sign_2_byte(sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo, sig_k , 153 , 255 , 0);
+        log_mpidump("[ATTACK 3]  sig k dopo is    e", sig_k);
+	
+	}
+
+	else {  //otherwise call the normal signature
         rc = sign (sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo);
+	}
         //log_mpidump("[NORMAL]  sig k dopo is    e", sig_k);
      }
   }

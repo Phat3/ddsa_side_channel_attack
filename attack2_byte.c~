@@ -3,70 +3,12 @@
 #include <gcrypt.h>
 
 
-FILE *report;
-
-#define DEBUG_MPI_PRINT(mpi,msg) { printf("%s\n", msg); gcry_mpi_dump(mpi); printf("\n"); }
-
-#define DEBUG_SEXP_PRINT(sexp,msg) { printf("%s\n", msg); gcry_sexp_dump(sexp); printf("\n"); }
-
-
-//---------------------- GLOBAL VARIABLES ----------------------
-
-//create the s-expressions for the key
-gcry_sexp_t dsa_key_pair;
-//name of the files in which the different keypairs are stored
-char * files[] = {"DSA_KEY_1024", "DSA_KEY_2048_224", "DSA_KEY_2048_256"};
-
-
-//---------------------- FUNCTIONS ----------------------
-
-//get the size of the key file
-int get_file_size(FILE * fp){
-    fseek(fp, 0L, SEEK_END);
-    int size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-    return size;
-}
-
-//build the s-expression of the key reading the file
-void retrieve_key_pair(char * filename){
-
-    void* dsa_buf; 
-    gcry_error_t err;
-    //open the correct file
-    FILE * file = fopen(filename, "rb");
-
-    if (!file) {
-        puts("fopen() failed");
-        exit(0);
-    }
-    //retrieve the file size
-    int size = get_file_size(file);
-    //allocate the buffer that will contain the key
-    dsa_buf = malloc(size);
-    if (!dsa_buf) {
-        puts("malloc: could not allocate rsa buffer");
-        exit(0);
-    }
-    //copy the content of the file in the buffer
-    if (fread(dsa_buf, size, 1, file) != 1) {
-       puts("fread() failed");
-       exit(0);
-    }
-    //build the s-expression
-    err = gcry_sexp_new(&dsa_key_pair, dsa_buf, size, 0); 
-   
-    if(err){
-        puts("Error");
-        exit(0);
-    }
-}
-
-void attack(int i, unsigned char *digest, int hash_len){
+int main( int argc , char * argv[]){
 	
     void* dsa_buf; 
 	
-    gcry_sexp_t new_dsa_key_pair;
+    gcry_sexp_t dsa_key_pair, new_dsa_key_pair;
+    gcry_sexp_t dsa_pub_key;
     gcry_sexp_t ciphertext , plaintext, ptx2, ctx2;
 	
     gcry_sexp_t r_param, r_tilda_param;
@@ -92,17 +34,57 @@ void attack(int i, unsigned char *digest, int hash_len){
     gcry_mpi_t y;
     gcry_mpi_t x;
 
+	
+	
+    int n = 1104 , i=0; // size of the file in which we have the dsa keys 
+	
+	
+    /* Let's retreive the key from the file */
+    //----------------------------------------
+	
+    FILE* lockf = fopen("DSA_KEY_1024", "rb");
+    
+    if (!lockf) {
+        puts("fopen() failed");
+    }
+	
+	dsa_buf = malloc(n);
+    if (!dsa_buf) {
+        puts("malloc: could not allocate rsa buffer");
+    }
+	
+	if (fread(dsa_buf, n, 1, lockf) != 1) {
+       puts("fread() failed");
+    }
+	
+    err = gcry_sexp_new(&dsa_key_pair, dsa_buf, n, 0);
+    
+    if(err){
+		puts("Error");
+	}
 
-    printf("ATTACK %s\n", files[i]);
+    
+    //*************** HASH THE MESSAGE ********************//
+    
+    const unsigned char* message = (const unsigned char * ) "Hello world.";
 
-    retrieve_key_pair(files[i]);
+    //get the hash_len of sha-1
+    int hash_len_bytes = gcry_md_get_algo_dlen(GCRY_MD_SHA1);
+
+    unsigned char digest[hash_len_bytes];
+
+    //calculate the hash in the binary representation
+    //the gcry_sexp_build requires the binary representation of the hash (20 bytes long)
+    //the ascii and the hex representations are 40 bytes long and this broke the HMAC computation when you try to sign your message 
+    gcry_md_hash_buffer(GCRY_MD_SHA1, digest, message, strlen(message));
+
 
     //*************** CORRECT SIGNATURE ********************//
 
 	//20 is the mdlen of sha1 as specified in https://lists.gnupg.org/pipermail/gnupg-devel/2013-September/027916.html
     //a well formatted number for the immaediate has an even number of digits
-    err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", hash_len , digest);
-
+    err = gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", hash_len_bytes , digest);
+	
     err = gcry_pk_sign(&ciphertext, plaintext, dsa_key_pair);
 
     //now let's convert the s-expression representing r into an MPI in order
@@ -146,7 +128,7 @@ void attack(int i, unsigned char *digest, int hash_len){
 
     //*************** FAULTY SIGNATURE ********************//
 
-    err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", hash_len , digest);
+    err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2_byte))" , "sha1", hash_len_bytes , digest);
 
     err = gcry_pk_sign(&ctx2, ptx2, dsa_key_pair);
 
@@ -170,7 +152,8 @@ void attack(int i, unsigned char *digest, int hash_len){
     unsigned long e = 0;
 
     unsigned int qbits = mpi_get_nbits(q);
-    unsigned int pbits = mpi_get_nbits(p);
+
+    int hash_len_bits = hash_len_bytes*8;
 
     gcry_mpi_t one = gcry_mpi_set_ui(NULL, 1);
 
@@ -180,10 +163,19 @@ void attack(int i, unsigned char *digest, int hash_len){
 
     gcry_mpi_invm(r,r,q); // r^-1
     
-    for(e = 0; e < qbits; e++){
 
-        gcry_mpi_t twoi = gcry_mpi_new(e);
-        gcry_mpi_mul_2exp(twoi, one, e);   // twoi = 2^e
+    unsigned int j;
+
+    for(e = 0; e < qbits ; e++){
+
+       gcry_mpi_t empi = gcry_mpi_set_ui(NULL,e);
+       gcry_mpi_t twoi = gcry_mpi_new(e);
+       gcry_mpi_mul_2exp(twoi, one, e);   // twoi = 2^e
+       
+	for( j=0; j< 256 ; j++){
+        
+        gcry_mpi_t jmpi = gcry_mpi_set_ui(NULL,j);
+	gcry_mpi_mulm(twoi,jmpi,empi,q);
   
     	//retrieve k
         gcry_mpi_mulm(tmp, s_tilda, twoi, q); // s_tilda*(2^e) modq q
@@ -220,13 +212,11 @@ void attack(int i, unsigned char *digest, int hash_len){
             puts("gcrypt: verify failed");
         }
         else{
-            fprintf(report,"\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
-    	    fprintf(report,"[DBG] BIT: %d  FAULT: k-2^e\n" , (int)e); //DEBUG 
-	    fprintf(report,"-----------------------------\n"); //DEBUG 
-  	    return;   
+            puts("\n[!!!]PRIVATE KEY CRACKED!!\n");
+    	    printf("[DBG] BYTE : %d * 2^%d  FAULT: k-j*2^%d\n" , j , (int)e,(int)e); //DEBUG 
+            exit(0);
         }
-
-
+      }
     }
     
 
@@ -234,11 +224,16 @@ void attack(int i, unsigned char *digest, int hash_len){
     printf("-----------------------------------------\n");
     printf("-----------------------------------------\n");
 
-    
-    for(e = 0; e < qbits; e++){
+    for(e = 0; e < qbits-8 ; e++){
 
-        gcry_mpi_t twoi = gcry_mpi_new(e);
-        gcry_mpi_mul_2exp(twoi, one, e);   // twoi = 2^e
+       gcry_mpi_t empi = gcry_mpi_set_ui(NULL,e);
+       gcry_mpi_t twoi = gcry_mpi_new(e);
+       gcry_mpi_mul_2exp(twoi, one, e);   // twoi = 2^e
+       
+	for( j=0; j< 256 ; j++){
+        
+        gcry_mpi_t jmpi = gcry_mpi_set_ui(NULL,j);
+	gcry_mpi_mulm(twoi,jmpi,empi,q);
   
         //retrieve k
         gcry_mpi_mulm(tmp, s_tilda, twoi, q); // s_tilda*(2^e) modq q
@@ -275,46 +270,13 @@ void attack(int i, unsigned char *digest, int hash_len){
             puts("gcrypt: verify failed");
         }
         else{
-  	    fprintf(report,"\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
-    	    fprintf(report,"[DBG] BIT: %d  FAULT: k+2^e\n" , (int)e); //DEBUG 
-	    fprintf(report,"-----------------------------\n"); //DEBUG 
-  	    return;   
+            puts("\n[!!!]PRIVATE KEY CRACKED!!\n");
+    	    printf("[DBG] BYTE : %d * 2^%d  FAULT: k-j*2^%d\n" , j , (int)e,(int)e); //DEBUG 
+            exit(0);
         }
 
     }
-}
-
-
-
-int main( int argc , char * argv[]){
-
-        
-
-    report = fopen("./report.out" , "w");
-    //*************** HASH THE MASSAGE ********************//
-
-    const unsigned char* message = (const unsigned char * ) "Hello world.";
-
-    //get the hash_len of sha-1
-    int hash_len = gcry_md_get_algo_dlen(GCRY_MD_SHA1);
-
-    unsigned char digest[hash_len];
-
-    //calculate the hash in the binary representation
-    //the gcry_sexp_build requires the binary representation of the hash (20 bytes long)
-    //the ascii and the hex representations are 40 bytes long and this broke the HMAC computation when you try to sign your message 
-    gcry_md_hash_buffer(GCRY_MD_SHA1, digest, message, strlen(message));
-
-    //*************** ATTACK THE CIPHER FOR THE 3 STANDARD DSA KEY LENGTH ********************//
-    int i = 0;
-
-    for(i = 0; i<3; i++){
-
-        attack(i,digest,hash_len);
-    
-    }
+}    
 
 }
-
-
 
