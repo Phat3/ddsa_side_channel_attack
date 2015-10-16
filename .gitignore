@@ -2,3 +2,9 @@
 DSA_KEY*
 compiled/
 *~
+*.log
+*.aux
+*.pdf
+*.toc
+*.out
+
