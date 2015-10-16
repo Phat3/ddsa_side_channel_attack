@@ -1,13 +1,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <gcrypt.h>
+#include <time.h>
 
 
-FILE *report;
+#define DEBUG_MPI_PRINT(mpi,msg) { printf("%s", msg); fflush(stdout); gcry_mpi_dump(mpi);}
 
-#define DEBUG_MPI_PRINT(mpi,msg) { printf("%s\n", msg); gcry_mpi_dump(mpi); printf("\n"); }
-
-#define DEBUG_SEXP_PRINT(sexp,msg) { printf("%s\n", msg); gcry_sexp_dump(sexp); printf("\n"); }
+#define DEBUG_SEXP_PRINT(sexp,msg) { printf("%s", msg); gcry_sexp_dump(sexp);}
 
 
 //---------------------- GLOBAL VARIABLES ----------------------
@@ -92,9 +91,6 @@ void attack(int i, unsigned char *digest, int hash_len){
     gcry_mpi_t y;
     gcry_mpi_t x;
 
-
-    printf("ATTACK %s\n", files[i]);
-
     retrieve_key_pair(files[i]);
 
     //*************** CORRECT SIGNATURE ********************//
@@ -138,12 +134,6 @@ void attack(int i, unsigned char *digest, int hash_len){
 
     misc_param = gcry_sexp_find_token(dsa_key_pair, "misc-key-info", 0);
 
-    printf("X\n");
-    gcry_mpi_dump(x);
-    printf("\n");
-
-
-
     //*************** FAULTY SIGNATURE ********************//
 
     err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", hash_len , digest);
@@ -158,12 +148,6 @@ void attack(int i, unsigned char *digest, int hash_len){
 
     m_param = gcry_sexp_find_token(ptx2, "hash", 0);
     m = gcry_sexp_nth_mpi ( m_param , 2, GCRYMPI_FMT_USG);
-
-    printf("DIGEST\n");
-    gcry_mpi_dump(m);
-    printf("\n");
-
-
     
     //NOW LET'S START THE ATTACK 
 
@@ -191,18 +175,10 @@ void attack(int i, unsigned char *digest, int hash_len){
         gcry_mpi_invm(result, result, q); // (s_tilda - s mod q)^-1
         gcry_mpi_mulm(result,result, tmp, q); // s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
 
-        printf("K RECONSTRUCTED\n");
-        gcry_mpi_dump(result);
-        printf("\n");
-
         //retrieve x
         gcry_mpi_mulm(result, s, result,q); // s*k mod q
         gcry_mpi_subm(result, result, m, q); // s*k - m mod q
         gcry_mpi_mulm(result, result,r,q); //(s*k -m)*r^-1 mod q
-
-        printf("X RECONSTRUCTED\n");
-        gcry_mpi_dump(result);   //WORKING!!
-        printf("\n");
 
         err = gcry_sexp_build(&new_dsa_key_pair,NULL,
                      "(key-data"
@@ -217,24 +193,20 @@ void attack(int i, unsigned char *digest, int hash_len){
         err = gcry_pk_verify(ctx2, plaintext, dsa_key_pair);
     
         if (err) {
-            puts("gcrypt: verify failed");
+            //puts("gcrypt: verify failed");
+	    continue;
         }
         else{
-            fprintf(report,"\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
-    	    fprintf(report,"[DBG] BIT: %d  FAULT: k-2^e\n" , (int)e); //DEBUG 
-	    fprintf(report,"-----------------------------\n"); //DEBUG 
+            printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
+    	    printf("[DBG] BIT: %d  FAULT: k-2^e\n" , (int)e); //DEBUG 
+            DEBUG_MPI_PRINT(result,"X = ");
+	    printf("\n");
   	    return;   
         }
 
 
     }
-    
-
-    printf("-----------------------------------------\n");
-    printf("-----------------------------------------\n");
-    printf("-----------------------------------------\n");
-
-    
+        
     for(e = 0; e < qbits; e++){
 
         gcry_mpi_t twoi = gcry_mpi_new(e);
@@ -246,18 +218,10 @@ void attack(int i, unsigned char *digest, int hash_len){
         gcry_mpi_invm(result, result, q); // (s_tilda - s mod q)^-1
         gcry_mpi_mulm(result,result, tmp, q); // s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
 
-        printf("K RECONSTRUCTED\n");
-        gcry_mpi_dump(result);
-        printf("\n");
-
         //retrieve x
         gcry_mpi_mulm(result, s, result,q); // s*k mod q
         gcry_mpi_subm(result, result, m, q); // s*k - m mod q
         gcry_mpi_mulm(result, result,r,q); //(s*k -m)*r^-1 mod q
-
-        printf("X RECONSTRUCTED\n");
-        gcry_mpi_dump(result);   //WORKING!!
-        printf("\n");
 
         err = gcry_sexp_build(&new_dsa_key_pair,NULL,
                      "(key-data"
@@ -272,12 +236,14 @@ void attack(int i, unsigned char *digest, int hash_len){
         err = gcry_pk_verify(ctx2, plaintext, dsa_key_pair);
     
         if (err) {
-            puts("gcrypt: verify failed");
+            //puts("gcrypt: verify failed");
+	    continue;
         }
         else{
-  	    fprintf(report,"\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
-    	    fprintf(report,"[DBG] BIT: %d  FAULT: k+2^e\n" , (int)e); //DEBUG 
-	    fprintf(report,"-----------------------------\n"); //DEBUG 
+  	    printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
+    	    printf("[DBG] BIT: %d  FAULT: k+2^e\n" , (int)e); //DEBUG 
+	    DEBUG_MPI_PRINT(result,"X = ");
+	    printf("\n");
   	    return;   
         }
 
@@ -288,9 +254,6 @@ void attack(int i, unsigned char *digest, int hash_len){
 
 int main( int argc , char * argv[]){
 
-        
-
-    report = fopen("./report.out" , "w");
     //*************** HASH THE MASSAGE ********************//
 
     const unsigned char* message = (const unsigned char * ) "Hello world.";
@@ -307,10 +270,23 @@ int main( int argc , char * argv[]){
 
     //*************** ATTACK THE CIPHER FOR THE 3 STANDARD DSA KEY LENGTH ********************//
     int i = 0;
+    clock_t t1, t2;
+ 
+    puts("\n");
 
     for(i = 0; i<3; i++){
-
+	
+	printf("******** ATTACKING %s ******* \n" , files[i]);
+ 	t1 = clock(); 
         attack(i,digest,hash_len);
+	t2 = clock(); 
+
+	float diff = (((float)t2 - (float)t1) / 1000000.0F ) * 1000;  
+ 
+	printf("PRIVATE KEY CRACKED IN %f ms\n " , diff );
+
+
+ 	printf("\n\n");
     
     }
 

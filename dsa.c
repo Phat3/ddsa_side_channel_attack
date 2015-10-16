@@ -598,7 +598,6 @@ sign (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
       rc = _gcry_dsa_gen_rfc6979_k (&k, skey->q, skey->x,
                                     abuf, (abits+7)/8, hashalgo, extraloops);
 
-      log_mpidump("kright is   x", k);
       if (rc)
         goto leave;
     }
@@ -611,8 +610,6 @@ sign (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
   /* r = (a^k mod p) mod q */
   mpi_powm( r, skey->g, k, skey->p );
   mpi_fdiv_r( r, r, skey->q );
-
-  log_mpidump("rright is   r", r);
 
   /* kinv = k^(-1) mod q */
   kinv = mpi_alloc( mpi_get_nlimbs(k) );
@@ -1054,8 +1051,6 @@ fault_sign (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
   gcry_mpi_t e = mpi_new(qbits);
   mpi_mul_2exp(e, one, (unsigned long)bit_fault);   // e = 2^i ---> in this example e = 2^3
 
-  log_mpidump("e is   e", e);
-
   gcry_mpi_t k_tilde = mpi_new(qbits);
 
   //damage the k
@@ -1064,16 +1059,12 @@ fault_sign (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
   else
      mpi_addm(k_tilde,k,e,skey->q);
 
-  log_mpidump("kfault is   x", k_tilde);
-
   //DEBUG ---- Pass the value of k fault to our attack program
   mpi_mul(sig_k, k_tilde, one);
   
   /* r = (a^k mod p) mod q */
   mpi_powm( r, skey->g, k_tilde, skey->p );   //r = g^k_tilda mod p ----> g^(k - 2^i) mod p
   mpi_fdiv_r( r, r, skey->q );    //r = (g^k_tilda mod p) mod q ----> (g^(k - 2^i) mod p) mod q
-
-  log_mpidump("rfault is   r", r);
 
   //****************** END FAULT *********************//
 
@@ -1167,9 +1158,8 @@ fault_sign_2 (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey
 
   gcry_mpi_t k_tilde = mpi_new(mpi_get_nlimbs(k));
   
-  printf("SUB TO K");
-  //damage the k
 
+  //damage the k
   if(sign==0)
      mpi_subm(k_tilde,k,e,skey->q);  //k_tilda = k - 2^i mod q
   else
@@ -1264,7 +1254,7 @@ fault_sign_2_byte (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key 
 
   //****************** FAULT *********************//
 
-  gcry_mpi_t one = mpi_set_ui(NULL, value_fault);   //1
+  gcry_mpi_t one = mpi_set_ui(NULL, value_fault);   
 
   //calculate 2^i ()
   gcry_mpi_t e = mpi_new(qbits);
@@ -1276,8 +1266,6 @@ fault_sign_2_byte (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key 
      mpi_subm(k_tilde,k,e,skey->q);  //k_tilda = k - 2^i mod q
   else
      mpi_addm(k_tilde,k,e,skey->q);
-
-  log_mpidump("[ATTACK 3] K_TILDE IS e", k_tilde);
 
   //DEBUG ---- Pass the value of k fault to our attack program
   mpi_mul(sig_k, k_tilde, one);
@@ -1386,22 +1374,12 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
 
   if(par){
 
-     printf("random bit fault is %d" , i);
-
-     printf("random flip is %d" , i);
-
      rc = fault_sign (sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo, sig_k , i , flip);
-     log_mpidump("[ATTACK 1]  sig k dopo is    e", sig_k);
   }
   else{
      //if the flag for the attack 1 is set call the faulty signature that inject the fault the creation of s
      if(par2){
-     
-     printf("random bit fault is %d" , i);
-
-     printf("random flip is %d" , i);
         rc = fault_sign_2(sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo, sig_k , i , flip);
-        log_mpidump("[ATTACK 2]  sig k dopo is    e", sig_k);
      }
      
      else{
@@ -1410,9 +1388,7 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
 	
 	int j = rand() % 256;
 
-	rc = fault_sign_2_byte(sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo, sig_k , 153 , 255 , 0);
-        log_mpidump("[ATTACK 3]  sig k dopo is    e", sig_k);
-	
+	rc = fault_sign_2_byte(sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo, sig_k , i , j , flip);
 	}
 
 	else {  //otherwise call the normal signature

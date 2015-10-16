@@ -2,7 +2,7 @@
 #include <gcrypt.h>
 
 
-#define DEBUG_MPI_PRINT(mpi,msg) { printf("%s\n", msg); gcry_mpi_dump(mpi); printf("\n"); }
+#define DEBUG_MPI_PRINT(mpi,msg) { printf("%s", msg); fflush(stdout); gcry_mpi_dump(mpi);}
 
 #define DEBUG_SEXP_PRINT(sexp,msg) { printf("%s\n", msg); gcry_sexp_dump(sexp); printf("\n"); }
 
@@ -80,9 +80,7 @@ void attack(int i, unsigned char *digest, int hash_len){
         gcry_mpi_t p;
         gcry_mpi_t q;
         gcry_mpi_t msg_digest;
-    
-
-        printf("ATTACK %s\n", files[i]);
+   
 
         retrieve_key_pair(files[i]);
 
@@ -121,7 +119,8 @@ void attack(int i, unsigned char *digest, int hash_len){
         x_param = gcry_sexp_find_token(dsa_key_pair, "x", 0);
         x = gcry_sexp_nth_mpi ( x_param , 1, GCRYMPI_FMT_USG);
 
-        DEBUG_MPI_PRINT(x,"X");
+	unsigned int qbits = mpi_get_nbits(q);
+	unsigned int pbits = mpi_get_nbits(p);
     
 
         msg_digest_param = gcry_sexp_find_token(plaintext, "hash", 0);
@@ -169,8 +168,10 @@ void attack(int i, unsigned char *digest, int hash_len){
 
         gcry_mpi_mulm(result, msg_digest, result, q);   //( (m* (s-tilda -s mod q) mod q) * ((r_tilda - s mod q) - (s_tilda - r mod q) mod q)^-1 mod q ) mod q == x (private key)
 
-        DEBUG_MPI_PRINT(result,"X CALCULATED");
-
+        printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
+    	     
+	DEBUG_MPI_PRINT(result,"X = ");
+	printf("\n");
 }
 
 int main( int argc , char * argv[]){
@@ -193,9 +194,14 @@ int main( int argc , char * argv[]){
     //*************** ATTACK THE CIPHER FOR THE 3 STANDARD DSA KEY LENGTH ********************//
     int i = 0;
 
+    puts("\n");
+
     for(i = 0; i<3; i++){
 
+	printf("******** ATTACKING %s ******* \n" , files[i]);
         attack(i,digest,hash_len);
+	printf("PRIVATE KEY CRACKED\n ");
+ 	printf("\n\n");
     
     }
 
