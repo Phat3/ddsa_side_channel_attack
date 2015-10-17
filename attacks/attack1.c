@@ -12,7 +12,7 @@
 //create the s-expressions for the key
 gcry_sexp_t dsa_key_pair;
 //name of the files in which the different keypairs are stored
-char * files[] = {"DSA_KEY_1024", "DSA_KEY_2048_224", "DSA_KEY_2048_256"};
+char * files[] = {"DSA_KEY_1024", "DSA_KEY_2048_224", "DSA_KEY_2048_256", "DSA_KEY_3072_256"};
 
 
 //---------------------- FUNCTIONS ----------------------
@@ -196,7 +196,7 @@ int main( int argc , char * argv[]){
 
     puts("\n");
 
-    for(i = 0; i<3; i++){
+    for(i = 0; i<4; i++){
 
 	printf("******** ATTACKING %s ******* \n" , files[i]);
         attack(i,digest,hash_len);

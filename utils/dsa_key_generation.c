@@ -41,6 +41,11 @@
 			filename = "DSA_KEY_2048_256"; 
 			break;
 
+		case (4):
+			err = gcry_sexp_build(&dsa_parms, NULL, "(genkey (dsa (nbits 4:3072) (qbits 3:256)))");  
+			filename = "DSA_KEY_3072_256"; 
+			break;
+
 		default:	
 			printf("Invalid option");
 			exit(0);
@@ -83,6 +88,9 @@ int main(int argc , char* argv [])
 
 	printf("Generating the 2048/256 bits key pair\n");
 	keygen(3);
+
+	printf("Generating the 3072/256 bits key pair\n");
+	keygen(4);
 
 	printf("SUCCESS!!\n");
 	
