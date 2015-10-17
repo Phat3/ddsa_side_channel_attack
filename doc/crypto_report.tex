@@ -6,7 +6,35 @@
 \usepackage{rotating}
 \usepackage{amsfonts}
 \usepackage{amssymb}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{amsmath}
+ 
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+ 
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
 
+\lstset{style=mystyle}
 
 \begin{document}
 \title{\textit{Deterministic DSA fault attack}}
@@ -54,21 +82,53 @@ In order to be a sound digital signature schemes the following properties must h
 
 \subsubsection{DSA mathematical structure}
 
-The reference group category is ($\mathbb{Z})$) -- COPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDES
+The reference group category is $(\mathbb{Z}^{*}_{p},\cdot )$ , \textit{p} prime s.t. \textit{q} | ( \textit{p-1} )} with \textit{q} also prime. The employed algebraic structure is then the multiplicative cyclic subgroup \textit{G} = <\textit{g}> with publicly known generator \textit{g} and order \textit{q}.
 
-\includegraphics[width=0.8\textwidth]{img_1.png} \\
+\includegraphics[width=0.8\textwidth]{img/img_1.png} \\ 
 
-SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDES
+FIPS 186-3 specifies the (L = $log_{2}(p)$ N = $log_{2}(q)$ ) length pairs of (1024,160),(2048,224),(2048,256) and (3072,256).
 
 \subsubsection{Cryptoscheme}
 
-SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDESCOPY FROM SLIDES
+Public  Key: $k_{pub} = (p,q,g,g^s)$ \\
+Private Key: $k_{priv} = s \in \mathbb{Z}^{*}_{q}$
+\\\\\\\\\\\\
+Signature Transformation:\\
+\framebox[9cm]{
+\begin{minipage}{8cm}
+$H(m)\in \{2,...,q-1\}$\\
+$k \overset{random}{\leftarrow}\mathbb{Z}^{*}_{q}$\\
+r \leftarrow ((g^l) $mod p$)$mod q$\\
+if  $r = 0 repeat with another random l$ \\
+s \leftarrow $k^{-1} \cdot (H(m) - s*r)$ $mod q $\\
+if $s = 0$ , repeat with another random $k$\\\\
+$Signature = < s,r >$\\
+$Send(m,Signature)$\\
+\end{minipage}
+}
+\\\\\\\\
+Validation Check:\\
+\framebox[9cm]{
+\begin{minipage}{8cm}
+\\Receive <m,Signature>\\
+if r,s $\notin \{1,....,q-1\}$  reject the signature
+Compute H(m)\\
+\\
+Accept signature if:\\
+u_{1} \leftarrow H(m)\cdot s^{-1} $mod q$ \\
+u_{2} \leftarrow r \cdot s^{-1} $mod q$ \\
+(g^{u_{1}}((g^{s})^{u_{2}}) $mod p mod q$ == r ?\\
+\end{minipage}
+}
+
+
+
 
 \subsection{The Deterministic Digital Signature Algorithm}
 
 \subsubsection{General overview}
 The step in the signing algorithm that require to generate a random parameter needs a great randomness in order to be secure; but digging with embedded system not always we have on board a sound RNG! \\This is the crucial point for which many manufacturers decide to employ RSA cryptosystem rather than DSA/ECDSA to sign objects.\\
-\\The Deterministic DSA proposed in the RFC 6979 try to make that step deterministic in order to increase the attractiveness of such system in the embedded world ( smart card, credit card etc... ).\\\\
+\\The Deterministic DSA proposed in the RFC 6979 try to make that step deterministic ( and impossible to deduct without the private key ) in order to increase the attractiveness of such system in the embedded world ( smart card, credit card , console, ... ).\\\\
 Remember that we ,in any way, need a good RNG in order to generate a strong private key. 
 This proposal make deterministic the signing, NOT the generation of keys that MUST be non deterministic and made a priopri.
 
@@ -78,7 +138,7 @@ This proposal make deterministic the signing, NOT the generation of keys that MU
 The generation of the deterministic \textit{k} depends only from the message to sign and the private key.\\
 According to the RFC ,  given the input message m, the following process is applied for the generation:
 
-\includegraphics[width=1.0\textwidth]{img_2.png} \\
+\includegraphics[width=1.0\textwidth]{img/img_2.png} \\
 
 \begin{itemize}
 \item qlen = binary length of the prime number \textit{q}
@@ -86,7 +146,7 @@ According to the RFC ,  given the input message m, the following process is appl
 \item The internal HMAC use the same hash function used in the h1=H(m)
 \end{itemize}
 
-\subsection{Other asymmetric deterministic algorithm}
+\subsection{Other digital signature algorithm}
 
 dECDSA  + EdDSA -- Bernstein
 
@@ -106,22 +166,132 @@ In order to inject a fault we can use different techniques that range from using
 
 \subsection{The attack in practice}
 
-INFO SULLE LIBRERIE USATE ( libgcrypt ) 
+We test our attack against the implementation of the DSA RFC 6979 in the GNU/libgcrypt\cite{lib} library. 
+In order to inject the attack using the library we added a flag during the building of the s-expression relative to the plaintext e.g.:
 
-\subsubsection{Breaking the exponentation}
+\begin{lstlisting}
+err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", hash_len , digest);
+\end{lstlisting}
 
-\subsubsection{Breaking the signature composition}
+When the function dsa-sign find that flag it redirects the flow to our faulty function that injects the desidered fault based on the type of the attack we want to perform.
+
+\includegraphics[width=1.0\textwidth]{img/img_3.png} \\
+
+The next two paragraphs describe the two attacks type and then we present the result obtained.
+
+\subsubsection{Damage the exponentation}
+
+Remembering from the DDSA scheme that we have to exponentiate the generator \textit{g} at the power of \textit{k}, we inject a bit fault into k during the exponentiation, obtaining g^{\tilde{z}} = \tilde{r} = r * g^{\pm 2^{i}}.
+
+\begin{lstlisting}
+  gcry_mpi_t one = mpi_set_ui(NULL, 1);  
+
+  gcry_mpi_t e = mpi_new(qbits);
+  
+  //calculate 2^bit_fault
+  mpi_mul_2exp(e, one, (unsigned long)bit_fault); 
+
+  gcry_mpi_t k_tilde = mpi_new(qbits);
+
+  //damage the k 
+  if( sign == 0 ) 
+     mpi_subm(k_tilde,k,e,skey->q); 
+  else 
+     mpi_addm(k_tilde,k,e,skey->q);
+
+  mpi_mul(sig_k, k_tilde, one);
+  
+  //****************** FAULT *********************//
+  mpi_powm( r, skey->g, k_tilde, skey->p );  
+  mpi_fdiv_r( r, r, skey->q );    
+  //****************** FAULT *********************//
+  
+\end{lstlisting}
+
+The attacks proceeds as follows:
+\begin{itemize}
+\item Obtain the correct signature $s = k^{-1}(m + xr) $
+\item Obtain the faulty signature $\tilde{s} = k^{-1}(m + x\tilda{r})$
+\item Write the system:\\ \\\begin{cases} s = k^{-1}(m + xr) \\ \tilde{s} = k^{-1}(m + x\tilde{r}) \end{cases}\\
+\\with \textit{k} and \textit{x} are incognit.
+
+
+\item Solving,we  obtain:\\\\
+\begin{cases}
+x \equiv_{q} \frac{(s-\tilde{s})m}{(r\tilde{s} - \tilde{r}s)} \\
+k \equiv_{q} s^{-1}(mx+r)
+\end{cases}
+
+\end{itemize}
+
+
+This attack is very interesting because it doesn't need any bruteforce in order to discover the key: all the parameters that we need in the previous formula are available from the output of the correct and faulty algorithm.
+
+The correctness of the attack is checked by creating a new dsa-key-pair based on the private key calculated and by signing a new plaintext with that key and then try to verify the signature with the original public key.
+
+
+\subsubsection{Damage the signature composition}
+
+For this attack we consider two level: a bit level and a byte level.\\\\ The bit level assume that with an active side channel attack we can surgically flip a single bit of k during the signature composition; this assumption is really optimistic and this precision can lead to a very fast cracking during the bruteforcing part of the algorithm.\\\\ The byte level is a more realistic assumption that we inject a fault of a byte inside the k; in this case the bruteforcing part of the attack will be slower , but the cost in order to inject the fault pratically is reduced.
+
+In this case we damage the k during the signature composition, so we have an incorrect value for s, s-tilde = [formula].
+
+\begin{lstlisting}
+ 
+  [ FROM /libgcrypt/cipher/dsa.c fault_sign_2_byte function ]
+
+  [...]
+  
+  mpi_powm( r, skey->g, k, skey->p );
+  mpi_fdiv_r( r, r, skey->q );
+
+  gcry_mpi_t one = mpi_set_ui(NULL, 1); 
+
+  //calculat 2^i ()
+  gcry_mpi_t e = mpi_new(qbits);
+  mpi_mul_2exp(e, one, (unsigned long) bit_fault);  
+
+  gcry_mpi_t k_tilde = mpi_new(mpi_get_nlimbs(k));
+  
+
+  //damage the k
+  if(sign==0)
+     mpi_subm(k_tilde,k,e,skey->q);  
+  else
+     mpi_addm(k_tilde,k,e,skey->q);
+
+  //****************** FAULT *********************//
+  
+  mpi_mul(sig_k, k_tilde, one);
+  
+  kinv = mpi_alloc( mpi_get_nlimbs(k) );
+  mpi_invm(kinv, k_tilde, skey->q );
+  
+  //****************** FAULT *********************//
+  
+ [...]
+
+\end{lstlisting}
+
+The attacks with a bit fault proceeds as follows: 
+\begin{itemize}
+\item Obtain the correct signature $s = k^{-1}(m + xr) $
+\item Obtain the faulty signature $\tilde{s} = \tilde{k}^{-1}(m + xr)$
+\item Notice that $\frac{s}{\tilde{s}}$
+\item Derive ...
+\end{itemize}
+
+
 
 \section{Results}
 
-\subsection{Breaking the exponentation}
+\subsection{Damage the exponentation}
 
-FARE TEST CON STESSO FAULT SUL BIT
 
-\subsection{Breaking the signature composition}
 
-FARE TIMING TEST CON STESSO FAULT SUL BIT
-FARE TIMING TEST CON STESSO FAULT SUL BYTE 
+\subsection{Damage the signature composition}
+
+
 
 \section{Conclusion}
 
@@ -129,7 +299,7 @@ FARE TIMING TEST CON STESSO FAULT SUL BYTE
 \begin{thebibliography}{10}
 \bibitem{rfc} https://tools.ietf.org/html/rfc6979
 \bibitem{fips} http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
-
+\bibitem{lib}https://www.gnu.org/software/libgcrypt/
 \end{thebibliography}
 
 \end{document}
