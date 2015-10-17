@@ -128,7 +128,7 @@ u_{2} \leftarrow r \cdot s^{-1} $mod q$ \\
 
 \subsubsection{General overview}
 The step in the signing algorithm that require to generate a random parameter needs a great randomness in order to be secure; but digging with embedded system not always we have on board a sound RNG! \\This is the crucial point for which many manufacturers decide to employ RSA cryptosystem rather than DSA/ECDSA to sign objects.\\
-\\The Deterministic DSA proposed in the RFC 6979 try to make that step deterministic in order to increase the attractiveness of such system in the embedded world ( smart card, credit card etc... ).\\\\
+\\The Deterministic DSA proposed in the RFC 6979 try to make that step deterministic ( and impossible to deduct without the private key ) in order to increase the attractiveness of such system in the embedded world ( smart card, credit card , console, ... ).\\\\
 Remember that we ,in any way, need a good RNG in order to generate a strong private key. 
 This proposal make deterministic the signing, NOT the generation of keys that MUST be non deterministic and made a priopri.
 
@@ -237,7 +237,11 @@ For this attack we consider two level: a bit level and a byte level.\\\\ The bit
 In this case we damage the k during the signature composition, so we have an incorrect value for s, s-tilde = [formula].
 
 \begin{lstlisting}
-   
+ 
+  [ FROM /libgcrypt/cipher/dsa.c fault_sign_2_byte function ]
+
+  [...]
+  
   mpi_powm( r, skey->g, k, skey->p );
   mpi_fdiv_r( r, r, skey->q );
 
@@ -264,14 +268,16 @@ In this case we damage the k during the signature composition, so we have an inc
   mpi_invm(kinv, k_tilde, skey->q );
   
   //****************** FAULT *********************//
+  
+ [...]
 
 \end{lstlisting}
 
-The attacks proceeds as follows: 
+The attacks with a bit fault proceeds as follows: 
 \begin{itemize}
-\item Obtain the correct signature  s = [FORMULA]
-\item Consider ...
-\item Notice that ...
+\item Obtain the correct signature $s = k^{-1}(m + xr) $
+\item Obtain the faulty signature $\tilde{s} = \tilde{k}^{-1}(m + xr)$
+\item Notice that $\frac{s}{\tilde{s}}$
 \item Derive ...
 \end{itemize}
 
