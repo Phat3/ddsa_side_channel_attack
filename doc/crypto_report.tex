@@ -184,6 +184,11 @@ The next two paragraphs describe the two attacks type and then we present the re
 Remembering from the DDSA scheme that we have to exponentiate the generator \textit{g} at the power of \textit{k}, we inject a bit fault into k during the exponentiation, obtaining g^{\tilde{z}} = \tilde{r} = r * g^{\pm 2^{i}}.
 
 \begin{lstlisting}
+
+  [ FROM /libgcrypt/cipher/dsa.c fault_sign function ]
+
+  [...]
+  
   gcry_mpi_t one = mpi_set_ui(NULL, 1);  
 
   gcry_mpi_t e = mpi_new(qbits);
@@ -277,12 +282,46 @@ The attacks with a bit fault proceeds as follows:
 \begin{itemize}
 \item Obtain the correct signature $s = k^{-1}(m + xr) $
 \item Obtain the faulty signature $\tilde{s} = \tilde{k}^{-1}(m + xr)$
-\item Notice that $\frac{s}{\tilde{s}}$
-\item Derive ...
+\item Notice that \\$\frac{s}{\tilde{s}}  = \frac{k^{-1}(m+xr)}{\tilde{k}^{-1}(m+xr)}$
+
+\item In case of a negative fault $k-2^{i} $ we have\\ $\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k-2^{i})^{-1}(m+xr)}$
+
+\item In case of a positive fault $k+2^{i} $ we have \\$\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k+2^{i})^{-1}(m+xr)}$
+
+
+\item calulating k for both the case we have: \\$k_{faultpos} = \frac{\tilde{s}2^{i}}{s-\tilde{s}}$ \\
+$k_{faultneg} = \frac{\tilde{s}2^{i}}{\tilde{s}-s}$ \\
+
+\item Notice that in this case we need a bruteforce in order to discover the right \textit{i} ( which bit has been flipped, 0<=i<=qbits ) and so to finally calculate k
+
+\includegraphics[width=1.0\textwidth]{img/img_5.png} \\
+
+\item After discovered the k, we can calculate the private key x as:\\ $x = \frac{sk - m}{r}$
+
 \end{itemize}
 
+The attacks with a byte fault proceeds as follows: 
+\begin{itemize}
+\item Obtain the correct signature $s = k^{-1}(m + xr) $
+\item Obtain the faulty signature $\tilde{s} = \tilde{k}^{-1}(m + xr)$
+\item Notice that \\$\frac{s}{\tilde{s}}  = \frac{k^{-1}(m+xr)}{\tilde{k}^{-1}(m+xr)}$
+
+\item In case of a negative fault $k-b2^{i} $ we have\\ $\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k-b2^{i})^{-1}(m+xr)}$
+
+\item In case of a positive fault $k+b2^{i} $ we have \\$\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k+b2^{i})^{-1}(m+xr)}$
 
 
+\item calulating k for both the case we have: \\$k_{faultpos} = \frac{\tilde{s}b2^{i}}{s-\tilde{s}}$ \\
+$k_{faultneg} = \frac{\tilde{s}b2^{i}}{\tilde{s}-s}$ \\
+
+\item Notice that in this case we need a bruteforce in order to discover the right \textit{b} and \textit{i} ( which byte has been flipped, 0<=i<=qbits and the value of the fault b, 0<=b<=255) and so to finally calculate k. The index \textit{i} is the value of the shift of the fault value b (we are trying all the possible value, for all the possible shift).
+
+\includegraphics[width=1.0\textwidth]{img/img_4.png} \\
+
+\item After discovered the k, we can calculate the private key x as:\\ $x = \frac{sk - m}{r}$
+
+
+\end{itemize}
 \section{Results}
 
 \subsection{Damage the exponentation}
