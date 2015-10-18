@@ -181,7 +181,7 @@ The next two paragraphs describe the two attacks type and then we present the re
 
 \subsubsection{Damage the exponentation}
 
-Remembering from the DDSA scheme that we have to exponentiate the generator \textit{g} at the power of \textit{k}, we inject a bit fault into k during the exponentiation, obtaining g^{\tilde{z}} = \tilde{r} = r * g^{\pm 2^{i}}.
+Remembering from the DDSA scheme that we have to exponentiate the generator \textit{g} at the power of \textit{k}, we inject a bit fault into k during the exponentiation, obtaining g^{\tilde{k}} = \tilde{r} = r \cdot g^{\pm 2^{i}}.
 
 \begin{lstlisting}
 
@@ -211,6 +211,8 @@ Remembering from the DDSA scheme that we have to exponentiate the generator \tex
   mpi_fdiv_r( r, r, skey->q );    
   //****************** FAULT *********************//
   
+  
+  [ ... ] 
 \end{lstlisting}
 
 The attacks proceeds as follows:
@@ -218,7 +220,7 @@ The attacks proceeds as follows:
 \item Obtain the correct signature $s = k^{-1}(m + xr) $
 \item Obtain the faulty signature $\tilde{s} = k^{-1}(m + x\tilda{r})$
 \item Write the system:\\ \\\begin{cases} s = k^{-1}(m + xr) \\ \tilde{s} = k^{-1}(m + x\tilde{r}) \end{cases}\\
-\\with \textit{k} and \textit{x} are incognit.
+\\with \textit{k} and \textit{x} are unknown.
 
 
 \item Solving,we  obtain:\\\\
@@ -239,7 +241,6 @@ The correctness of the attack is checked by creating a new dsa-key-pair based on
 
 For this attack we consider two level: a bit level and a byte level.\\\\ The bit level assume that with an active side channel attack we can surgically flip a single bit of k during the signature composition; this assumption is really optimistic and this precision can lead to a very fast cracking during the bruteforcing part of the algorithm.\\\\ The byte level is a more realistic assumption that we inject a fault of a byte inside the k; in this case the bruteforcing part of the attack will be slower , but the cost in order to inject the fault pratically is reduced.
 
-In this case we damage the k during the signature composition, so we have an incorrect value for s, s-tilde = [formula].
 
 \begin{lstlisting}
  
