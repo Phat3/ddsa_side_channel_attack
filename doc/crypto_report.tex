@@ -9,6 +9,15 @@
 \usepackage{listings}
 \usepackage{color}
 \usepackage{amsmath}
+\usepackage{titlesec}
+ 
+\setcounter{secnumdepth}{4}
+
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
  
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -241,10 +250,11 @@ The correctness of the attack is checked by creating a new dsa-key-pair based on
 
 For this attack we consider two level: a bit level and a byte level.\\\\ The bit level assume that with an active side channel attack we can surgically flip a single bit of k during the signature composition; this assumption is really optimistic and this precision can lead to a very fast cracking during the bruteforcing part of the algorithm.\\\\ The byte level is a more realistic assumption that we inject a fault of a byte inside the k; in this case the bruteforcing part of the attack will be slower , but the cost in order to inject the fault pratically is reduced.
 
+\paragraph{Bit level fault}
 
 \begin{lstlisting}
  
-  [ FROM /libgcrypt/cipher/dsa.c fault_sign_2_byte function ]
+  [ FROM /libgcrypt/cipher/dsa.c fault_sign_2 function ]
 
   [...]
   
@@ -300,6 +310,43 @@ $k_{faultneg} = \frac{\tilde{s}2^{i}}{\tilde{s}-s}$ \\
 \item After discovered the k, we can calculate the private key x as:\\ $x = \frac{sk - m}{r}$
 
 \end{itemize}
+
+\paragraph{Byte level fault}
+
+\begin {lstlisting}
+
+  [ FROM /libgcrypt/cipher/dsa.c   fault_sign_2_byte function ]
+  
+  [ ... ]
+  
+  mpi_powm( r, skey->g, k, skey->p );
+  mpi_fdiv_r( r, r, skey->q );
+
+  gcry_mpi_t one = mpi_set_ui(NULL, value_fault);   
+
+
+  gcry_mpi_t e = mpi_new(qbits);
+  mpi_mul_2exp(e, one, byte_fault);   
+
+  gcry_mpi_t k_tilde = mpi_new(mpi_get_nlimbs(k));
+
+  if(sign==0)
+     mpi_subm(k_tilde,k,e,skey->q);  
+  else
+     mpi_addm(k_tilde,k,e,skey->q);
+
+  //****************** FAULT *********************//
+  
+  mpi_mul(sig_k, k_tilde, one);
+  
+  kinv = mpi_alloc( mpi_get_nlimbs(k) );
+  mpi_invm(kinv, k_tilde, skey->q );
+
+  //****************** FAULT *********************//
+  
+  [ ... ]
+
+\end{lstlisting}
 
 The attacks with a byte fault proceeds as follows: 
 \begin{itemize}
