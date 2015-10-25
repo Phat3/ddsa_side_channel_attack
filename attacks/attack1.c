@@ -63,18 +63,18 @@ void attack(int i, unsigned char *digest, int hash_len){
     
         gcry_error_t err;
 
-        gcry_sexp_t ciphertext , plaintext, ptx2;
+        gcry_sexp_t ciphertext , plaintext, ptx2, new_dsa_key_pair;
         
         gcry_sexp_t r_param, r_tilda_param, k_tilda_param, msg_digest_param;
         gcry_sexp_t s_param, s_tilda_param;
         gcry_sexp_t g_param;
         gcry_sexp_t p_param;
         gcry_sexp_t q_param;
-        gcry_sexp_t x_param;
+        gcry_sexp_t x_param, y_param;
         
         
         
-        gcry_mpi_t r , r_tilda, k_tilda, x;
+        gcry_mpi_t r , r_tilda, k_tilda, x, y;
         gcry_mpi_t s , s_tilda;
         gcry_mpi_t g;
         gcry_mpi_t p;
@@ -119,8 +119,11 @@ void attack(int i, unsigned char *digest, int hash_len){
         x_param = gcry_sexp_find_token(dsa_key_pair, "x", 0);
         x = gcry_sexp_nth_mpi ( x_param , 1, GCRYMPI_FMT_USG);
 
-	unsigned int qbits = mpi_get_nbits(q);
-	unsigned int pbits = mpi_get_nbits(p);
+        y_param = gcry_sexp_find_token(dsa_key_pair, "y", 0);
+        y = gcry_sexp_nth_mpi ( y_param , 1, GCRYMPI_FMT_USG);
+
+    	unsigned int qbits = mpi_get_nbits(q);
+    	unsigned int pbits = mpi_get_nbits(p);
     
 
         msg_digest_param = gcry_sexp_find_token(plaintext, "hash", 0);
@@ -168,10 +171,26 @@ void attack(int i, unsigned char *digest, int hash_len){
 
         gcry_mpi_mulm(result, msg_digest, result, q);   //( (m* (s-tilda -s mod q) mod q) * ((r_tilda - s mod q) - (s_tilda - r mod q) mod q)^-1 mod q ) mod q == x (private key)
 
-        printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
+        err = gcry_sexp_build(&new_dsa_key_pair,NULL,
+                     "(key-data"
+                     " (public-key"
+                     "  (dsa(p%m)(q%m)(g%m)(y%m)))"
+                     " (private-key"
+                     "  (dsa(p%m)(q%m)(g%m)(y%m)(x%m))))",
+                    p,q,g,y,p,q,g,y,result);
     	     
-	DEBUG_MPI_PRINT(result,"X = ");
-	printf("\n");
+    	err = gcry_pk_sign(&ciphertext, plaintext, new_dsa_key_pair);
+
+        err = gcry_pk_verify(ciphertext, plaintext, dsa_key_pair);
+    
+        if (err) {
+            printf("\nSomething went wrong...\n");
+        }
+        else{
+            printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
+            DEBUG_MPI_PRINT(result,"X = ");
+            printf("\n");
+        }
 }
 
 int main( int argc , char * argv[]){
@@ -198,10 +217,10 @@ int main( int argc , char * argv[]){
 
     for(i = 0; i<4; i++){
 
-	printf("******** ATTACKING %s ******* \n" , files[i]);
+    	printf("******** ATTACKING %s ******* \n" , files[i]);
         attack(i,digest,hash_len);
-	printf("PRIVATE KEY CRACKED\n ");
- 	printf("\n\n");
+    	printf("PRIVATE KEY CRACKED\n ");
+     	printf("\n\n");
     
     }
 
