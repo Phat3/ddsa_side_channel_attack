@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <gcrypt.h>
-
+#include <time.h>
 
 #define DEBUG_MPI_PRINT(mpi,msg) { printf("%s", msg); fflush(stdout); gcry_mpi_dump(mpi);}
 
@@ -185,12 +185,9 @@ void attack(int i, unsigned char *digest, int hash_len){
     
         if (err) {
             printf("\nSomething went wrong...\n");
+            exit(0);
         }
-        else{
-            printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
-            DEBUG_MPI_PRINT(result,"X = ");
-            printf("\n");
-        }
+
 }
 
 int main( int argc , char * argv[]){
@@ -212,14 +209,24 @@ int main( int argc , char * argv[]){
 
     //*************** ATTACK THE CIPHER FOR THE 3 STANDARD DSA KEY LENGTH ********************//
     int i = 0;
+    int j = 0;
 
     puts("\n");
 
-    for(i = 0; i<4; i++){
+    clock_t t1, t2;
 
+    for(i = 0; i<4; i++){
+        float sum = 0;
     	printf("******** ATTACKING %s ******* \n" , files[i]);
-        attack(i,digest,hash_len);
-    	printf("PRIVATE KEY CRACKED\n ");
+        for(j = 0; j < 100; j++){
+            t1 = clock();
+            attack(i,digest,hash_len);
+            t2 = clock();
+            float diff = (((float)t2 - (float)t1) / 1000000.0F ) * 1000; 
+            sum = sum + diff;
+        }          
+ 
+        printf("PRIVATE KEY CRACKED IN %f ms ON AVERAGE\n " , sum/100 );
      	printf("\n\n");
     
     }
