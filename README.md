@@ -19,31 +19,30 @@ These attacks can lead directly to a leak of the private key and therefore break
 
 3 - Compile the libgcrypt with:
 
-	```bash
+	
 	cd $PATH_TO_LIBGCRYPY
 	./configure --enable-maintainer-mode && make
 	sudo make install
-	```
+	
 4 - Go to the project root folder
 
 5 - Compile the file that generates the various keypairs and generate them
 
-	```bash
+	
 	gcc -o key_gen utils/dsa_key_generation.c `libgcrypt-config --cflags --libs`
 	./key_gen
-	```
+	
 6 - Compile the attack you want to test and run it
 
-	```bash
 	gcc -o attack attacks/attack1.c `libgcrypt-config --cflags --libs`
 	./attack
-	```
+	
 7 - Done! :)
 
 
 ## Attacks explanation
 
-### Damage the exponentiation (attack1.c)
+#### Damage the exponentiation (attack1.c)
 
 1 - Obtain the correct signature s = k^(-1)(m + x*r)		(1)
 
@@ -56,7 +55,7 @@ These attacks can lead directly to a leak of the private key and therefore break
 This attack runs with a time complexity of O(c).
 
 
-### Damage the signature composition (attack2.c / attack2_byte.c)
+#### Damage the signature composition (attack2.c / attack2_byte.c)
 
 For this attack we consider two level: a bit level and a byte level. In the first case the fault injected flips only one bit, while in the second case it flips at most 1 byte.
 
