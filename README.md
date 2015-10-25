@@ -69,10 +69,10 @@ For this attack we consider two level: a bit level and a byte level. In the firs
 
 5 - Solve the fraction for k and then retrive the private key x
 
-We have to bruteforce all the possible value for i so the algorithm runs in O(n).
+We have to bruteforce all the possible values for i so the algorithm runs in O(n).
 
 
 ## More information
 
-For a better and a complete explanation of these attacks see the pdf inside the repository.
+For a better and a complete explanation of these attacks see the Report.pdf inside the repository.
 

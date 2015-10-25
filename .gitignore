@@ -1,10 +1,10 @@
+doc/crypto_report.pdf
 ./compiled/*
 DSA_KEY*
 compiled/
 *~
 *.log
 *.aux
-*.pdf
 *.toc
 *.out
 *.gz
