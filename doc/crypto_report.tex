@@ -157,7 +157,13 @@ According to the RFC ,  given the input message m, the following process is appl
 
 \subsection{Other digital signature algorithm}
 
-dECDSA  + EdDSA -- Bernstein
+Chosing a different group and a different set of operations it is possible to build some variant of the DSA algorithm.The two principal cìvariants are:
+\begin{itemize}
+	\item \textbf{dECDSA:}
+	Is a variant of DSA which uses elliptic curve cryptography. With this type of cryptography is possible to achive the same security level, compared to the normal DSA algorithm, with a smaller key length.
+	\item \textbf{EdDSA Bernstein:}
+The Edwards-curve digital sign algorithm is a digital signature scheme using a variant of Schnorr signature based on Twisted Edwards curves. It is designed for high performance while avoiding security problems that have surfaced in other digital signature schemes such as some side channel attack.
+\end{itemize}
 
 \section{Cracking the Deterministic DSA}
 
@@ -371,13 +377,62 @@ $k_{faultneg} = \frac{\tilde{s}b2^{i}}{\tilde{s}-s}$ \\
 
 \end{itemize}
 \section{Results}
+We have tested these attack on 4 key length:
+\begin{itemize}
+\item p = 1024 bit		q = 160 bit
+\item p = 2048 bit		q = 224 bit
+\item p = 2048 bit		q = 256 bit
+\item p = 3072 bit 		q = 256 bit
+\end{itemize}
+And with two scenarios for each length:
+\begin{itemize}
+\item optimal case: the fault happens on the first bit/byte of k 
+\item worst case: the fault happens on the last bit/byte of k
+\end{itemize}
 
 \subsection{Damage the exponentation}
+\begin{itemize}
+\item Bit level \ Byte level:
 
+In this attack the distincton between bit level and byte level has no meaning because the time complexity is alway O(c) regardless the type of the fault injected. The private key is cracked in less than one second even if the fault is injected at the word level.
+
+\end{itemize}
 
 
 \subsection{Damage the signature composition}
+\begin{itemize}
+\item Bit level:
 
+\begin{table}[!htbp]
+\centering
+\label{my-label}
+\begin{tabular}{|c|c|c|}
+\hline
+         & Optimal case & Worst case     \\ \hline
+Length 1 & 4.953000 ms  & 295.578003 ms  \\ \hline
+Length 2 & 14.788000 ms & 1547.551025 ms \\ \hline
+Length 3 & 15.799001 ms & 2021.688965 ms \\ \hline
+Length 4 & 28.413000 ms & 3562.698975 ms \\ \hline
+\end{tabular}
+\end{table}
+
+
+\item Byte level:
+\begin{table}[!htbp]
+\centering
+\label{my-label}
+\begin{tabular}{|c|c|c|}
+\hline
+         & Optimal case & Worst case     \\ \hline
+Length 1 & 132.716995 ms  & 75677.210938 ms  \\ \hline
+Length 2 & 479.232025 ms & 290135.656250 ms \\ \hline
+Length 3 & 555.675049 ms & 447803.687500 ms \\ \hline
+Length 4 & 972.052002 ms & 841949.000000 ms \\ \hline
+\end{tabular}
+\end{table}
+
+
+\end{itemize}
 
 
 \section{Conclusion}
