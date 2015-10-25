@@ -396,6 +396,21 @@ And with two scenarios for each length:
 
 In this attack the distincton between bit level and byte level has no meaning because the time complexity is alway O(c) regardless the type of the fault injected. The private key is cracked in less than one second even if the fault is injected at the word level.
 
+These are the average time necessary in order to complete the attack
+
+\begin{table}[!htbp]
+\centering
+\label{my-label}
+\begin{tabular}{|c|c|c|}
+\hline
+         & Avg time   \\ \hline
+Length 1 & 2.241930 ms \\ \hline
+Length 2 & 7.508261 ms \\ \hline
+Length 3 & 8.846499 ms \\ \hline
+Length 4 & 16.900461 ms \\ \hline
+\end{tabular}
+\end{table}
+
 \end{itemize}
 
 
