@@ -10,6 +10,14 @@ These attacks can lead directly to a leak of the private key and therefore break
 
 * [libgcrypt](https://www.gnu.org/software/libgcrypt/) 
 
+# Environment
+
+These attacks were tested on:
+
+	- Xubuntu 14.04 ./configure 3.19.0-31-generic
+
+	- libgcrypt 1.6.4
+
 
 ## Instructions
 
@@ -75,4 +83,9 @@ We have to bruteforce all the possible values for i so the algorithm runs in O(n
 ## More information
 
 For a better and a complete explanation of these attacks see the Report.pdf inside the repository.
+
+
+## Contributors
+
+- [Degrigis](https://github.com/degrigis) 
 
