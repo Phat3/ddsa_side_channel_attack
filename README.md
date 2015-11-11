@@ -14,7 +14,7 @@ These attacks can lead directly to a leak of the private key and therefore break
 
 These attacks were tested on:
 
-	- Xubuntu 14.04 ./configure 3.19.0-31-generic
+	- Xubuntu 14.04 3.19.0-31-generic
 
 	- libgcrypt 1.6.4
 

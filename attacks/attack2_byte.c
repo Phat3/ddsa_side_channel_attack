@@ -235,7 +235,6 @@ void attack(int i, unsigned char *digest, int hash_len){
         gcry_mpi_invm(result, result, q); // (s_tilda - s mod q)^-1
         gcry_mpi_mulm(result,result, tmp, q); // s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
 
-        printf("K RECONSTRUCTED\n");
         gcry_mpi_dump(result);
         printf("\n");
 
@@ -244,7 +243,6 @@ void attack(int i, unsigned char *digest, int hash_len){
         gcry_mpi_subm(result, result, m, q); // s*k - m mod q
         gcry_mpi_mulm(result, result,r,q); //(s*k -m)*r^-1 mod q
 
-        printf("X RECONSTRUCTED\n");
         gcry_mpi_dump(result);   //WORKING!!
         printf("\n");
 

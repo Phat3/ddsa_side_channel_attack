@@ -13,6 +13,7 @@
 gcry_sexp_t dsa_key_pair;
 //name of the files in which the different keypairs are stored
 char * files[] = {"DSA_KEY_1024", "DSA_KEY_2048_224", "DSA_KEY_2048_256", "DSA_KEY_3072_256"};
+int printed = 0;
 
 
 //---------------------- FUNCTIONS ----------------------
@@ -187,7 +188,10 @@ void attack(int i, unsigned char *digest, int hash_len){
             printf("\nSomething went wrong...\n");
             exit(0);
         }
-
+        if(!printed){
+             DEBUG_MPI_PRINT(result,"\nX = ");
+             printed = 1;
+        }
 }
 
 int main( int argc , char * argv[]){
@@ -216,6 +220,7 @@ int main( int argc , char * argv[]){
     clock_t t1, t2;
 
     for(i = 0; i<4; i++){
+        printed = 0;
         float sum = 0;
     	printf("******** ATTACKING %s ******* \n" , files[i]);
         for(j = 0; j < 100; j++){
@@ -226,7 +231,7 @@ int main( int argc , char * argv[]){
             sum = sum + diff;
         }          
  
-        printf("PRIVATE KEY CRACKED IN %f ms ON AVERAGE\n " , sum/100 );
+        printf("\nPRIVATE KEY CRACKED IN %f ms ON AVERAGE\n " , sum/100 );
      	printf("\n\n");
     
     }
