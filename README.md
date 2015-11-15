@@ -34,18 +34,20 @@ These attacks were tested on:
 	
 4 - Go to the project root folder
 
-5 - Compile the file that generates the various keypairs and generate them
+5 - Make sure that you will compile the following file with the libgcrypt just compiled!
+
+6 - Compile the file that generates the various keypairs and generate them
 
 	
 	gcc -o key_gen utils/dsa_key_generation.c `libgcrypt-config --cflags --libs`
 	./key_gen
 	
-6 - Compile the attack you want to test and run it
+7 - Compile the attack you want to test and run it
 
 	gcc -o attack attacks/attack1.c `libgcrypt-config --cflags --libs`
 	./attack
 	
-7 - Done! :)
+8 - Done! :)
 
 
 ## Attacks explanation
