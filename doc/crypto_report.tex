@@ -10,6 +10,7 @@
 \usepackage{color}
 \usepackage{amsmath}
 \usepackage{titlesec}
+\usepackage[linesnumbered, ruled]{algorithm2e}
  
 \setcounter{secnumdepth}{4}
 
@@ -63,7 +64,7 @@
 \tableofcontents
 
 \section{Introduction}
-In this paper we want to introduce two active side channel attacks against the deterministic version of the Digital Signature Algorithm ( from now on DDSA ) as specified in the RFC 6979\cite{rfc}.\\
+In this paper we want to present two active side channel attacks against the deterministic version of the Digital Signature Algorithm ( from now on DDSA ) as specified in the RFC 6979\cite{rfc}.\\
 These attacks can lead directly to a leak of the private key and therefore breaking the authenticity of the signatures created using this algorithm. \\\\
 We will proceed in this way: first we provide some useful background in order to understand better the paper, then we explain the attacks in details and finally we present the feasibility of the attack by showing the time needed to break the DSA with some of the keysize currently available.
 
@@ -83,7 +84,7 @@ The DSA is one of three digital signature schemes specified in FIPS 186\cite{fip
 In order to be a sound digital signature schemes the following properties must hold:
 
 \begin{itemize} 
-\item the authenticity of a signature generated from a fixed message and fixed private key can be verified by using the corresponding public key.
+\item the authenticity of a signature generated from a given message and a given private key can be verified by using the corresponding public key.
 \item it should be computationally infeasible to generate a valid signature for a party without knowing that party's private key. 
 \item The private key MUST remain private, otherwise the authenticity of the signature created with that key is broken.
 \item The public key owner MUST be verifiable, otherwise we can't assure that we had receive a message from a particoular source.
@@ -92,60 +93,67 @@ In order to be a sound digital signature schemes the following properties must h
 \subsubsection{DSA mathematical structure}
 
 The reference group category is $(\mathbb{Z}^{*}_{p},\cdot )$ , \textit{p} prime s.t. \textit{q} | ( \textit{p-1} )} with \textit{q} also prime. The employed algebraic structure is then the multiplicative cyclic subgroup \textit{G} = <\textit{g}> with publicly known generator \textit{g} and order \textit{q}.
-
-\includegraphics[width=0.8\textwidth]{img/img_1.png} \\ 
-
-FIPS 186-3 specifies the (L = $log_{2}(p)$ N = $log_{2}(q)$ ) length pairs of (1024,160),(2048,224),(2048,256) and (3072,256).
+\\\\
+In the FIPS 186-3\cite{fips} standardization the number of bits of the two prime numbers (L = $log_{2}(p)$ N = $log_{2}(q)$ ) are setted to: 1024|160 , 2048|224 , 2048|256 and 3072|256.
 
 \subsubsection{Cryptoscheme}
 
 Public  Key: $k_{pub} = (p,q,g,g^s)$ \\
 Private Key: $k_{priv} = s \in \mathbb{Z}^{*}_{q}$
-\\\\\\\\\\\\
-Signature Transformation:\\
-\framebox[9cm]{
-\begin{minipage}{8cm}
-$H(m)\in \{2,...,q-1\}$\\
-$k \overset{random}{\leftarrow}\mathbb{Z}^{*}_{q}$\\
-r \leftarrow ((g^l) $mod p$)$mod q$\\
-if  $r = 0 repeat with another random l$ \\
-s \leftarrow $k^{-1} \cdot (H(m) - s*r)$ $mod q $\\
-if $s = 0$ , repeat with another random $k$\\\\
-$Signature = < s,r >$\\
-$Send(m,Signature)$\\
-\end{minipage}
-}
-\\\\\\\\
-Validation Check:\\
-\framebox[9cm]{
-\begin{minipage}{8cm}
-\\Receive <m,Signature>\\
-if r,s $\notin \{1,....,q-1\}$  reject the signature
-Compute H(m)\\
 \\
-Accept signature if:\\
-u_{1} \leftarrow H(m)\cdot s^{-1} $mod q$ \\
-u_{2} \leftarrow r \cdot s^{-1} $mod q$ \\
-(g^{u_{1}}((g^{s})^{u_{2}}) $mod p mod q$ == r ?\\
-\end{minipage}
-}
 
+\begin{algorithm}[H]
+  \KwData{A message \textit{m} to sign and a dsa key pair}
+  \KwResult{The signature of the given message \textit{m} }
+  r = 0\;
+  s = 0\;
+  h = H(\textit{m})\;
+  \While{r == 0 or s == 0}{
+    k = rand() $\in \mathbb{Z}^{*}_{q}$ \;
+    r = $((g^k)$ mod p $)$ mod q \;
+    s = $k^{-1} \cdot (H(m) - s \cdot r)$ mod q\; 
+  }
+  signature = <\texit{r},\textit{s}>\;
+  send(m,signature)\;
+  \caption{DSA signature transformation algorithm}
+\end{algorithm}
+\\\\\\
+\begin{algorithm}[H]
+  \KwData{A DSA signature <\textit{r},\textit{s}> to verify , a message \textit{m} to be verified against the received signature and the dsa public key associated to the private one used to sign the message \textit{m}}
+  \KwResult{Accept or not the signature }
+  \eIf{r,s $\notin \{1,....,q-1\}$}{
+      print "Signature rejected"\;
+      return -1\;
+    }{
+      h = H(\textit{m})\;
+      u_{1} = h \cdot $s^{-1}$ mod q \;
+      u_{2} = r \cdot $s^{-1}$ mod q \;
+      \eIf{($g^{u_{1}}((g^{s})^{u_{2}}$) mod p mod q == r}{
+        print "Signature accepted"\;
+        return 1\;
+      }{
+        print "Signature rejected"\;
+        return -1\;
+      }
+   }
+  \caption{DSA verify algorithm}
+\end{algorithm}
 
-
+\\\\\\\\
 
 \subsection{The Deterministic Digital Signature Algorithm}
 
 \subsubsection{General overview}
-The step in the signing algorithm that require to generate a random parameter needs a great randomness in order to be secure; but digging with embedded system not always we have on board a sound RNG! \\This is the crucial point for which many manufacturers decide to employ RSA cryptosystem rather than DSA/ECDSA to sign objects.\\
-\\The Deterministic DSA proposed in the RFC 6979 try to make that step deterministic ( and impossible to deduct without the private key ) in order to increase the attractiveness of such system in the embedded world ( smart card, credit card , console, ... ).\\\\
-Remember that we ,in any way, need a good RNG in order to generate a strong private key. 
+The step in the DSA signing algorithm that requires to generate a random parameter ( a "true" random number, not a pseudorandom one ) needs a great source of randomness in order to be secure; on normal PCs we can generate sound random numbers by exploiting unpredictable data like entropy, the exact time an user press keys on keyboard, the position of the mouse at a specific time, or any other kind of event. \\\\Dealing with embedded system is a problem from this point of view,in fact we don't have, on board, a real randomness source as before and so not a great RNG to generate unpredictable random numbers for our algorithm! \\This is the crucial point for which many manufacturers decide to employ RSA cryptosystem, that doesn't require random number during the encryption transformation, rather than DSA/ECDSA, the latter in fact require by design a true random number for the encryption transformation.\\
+\\The Deterministic DSA proposed in the RFC 6979\cite{rfc} tries to "safely derandomize" the step in the algorithm that needs a true random number for the \textit{k} parameter in order to increase the attractiveness of such system in the embedded world ( smart card, credit card, console or any other kind of board). The security relies on whether the deterministic generation of k is indistinguishable from the output of a random oracle.\\\\
+Remember that,in any way, we need a good RNG in order to generate a strong private key. 
 This proposal make deterministic the signing, NOT the generation of keys that MUST be non deterministic and made a priopri.
 
 
 \subsubsection{K deterministic generation}
 
 The generation of the deterministic \textit{k} depends only from the message to sign and the private key.\\
-According to the RFC ,  given the input message m, the following process is applied for the generation:
+According to the RFC, given the input message and a private key, the following process is applied for the generation:
 
 \includegraphics[width=1.0\textwidth]{img/img_2.png} \\
 
@@ -155,15 +163,7 @@ According to the RFC ,  given the input message m, the following process is appl
 \item The internal HMAC use the same hash function used in the h1=H(m)
 \end{itemize}
 
-\subsection{Other digital signature algorithm}
-
-Chosing a different group and a different set of operations it is possible to build some variant of the DSA algorithm.The two principal cìvariants are:
-\begin{itemize}
-	\item \textbf{dECDSA:}
-	Is a variant of DSA which uses elliptic curve cryptography. With this type of cryptography is possible to achive the same security level, compared to the normal DSA algorithm, with a smaller key length.
-	\item \textbf{EdDSA Bernstein:}
-The Edwards-curve digital sign algorithm is a digital signature scheme using a variant of Schnorr signature based on Twisted Edwards curves. It is designed for high performance while avoiding security problems that have surfaced in other digital signature schemes such as some side channel attack.
-\end{itemize}
+This process has been selected in order to maximize as possible the dependency of the deterministic \textit{k} from the message to sign and the private key used. The final goal is to make the deterministic generation of \textit{k} indistinguishable from the output of a random oracle. The math structure behind this is out of scope of this paper, you can read more details in the RFC\cite{rfc}. 
 
 \section{Cracking the Deterministic DSA}
 
@@ -176,66 +176,145 @@ The differential fault analysis is an active side channel attack that is perform
 \item Correlate the correct signature with the faulty one and extract the private key.
 \end{itemize}
 
-In order to inject a fault we can use different techniques that range from using laser beam during the signing process, to voltage spike, insane overclocking etc..
-\\Usually critical embedded systems like credit card implements different defenses against this fault injection techniques; this raise a lot the cost of an attack performed by an attacker. \\Bypass this kind of defense is out of scope of this paper.
+In order to inject a fault we can use different techniques that range from using laser beam during the signing process, to voltage spike or insane overclocking.
+\\Usually critical embedded systems like credit card implements different defenses against this fault injection techniques; this raise a lot the cost of an attack performed by an attacker. \\Bypass this kind of defense is out of scope of this paper, our assumption is that the system is vulnerable to this kind of attacks.
 
-\subsection{The attack in practice}
+\subsection{The attacks}
 
-We test our attack against the implementation of the DSA RFC 6979 in the GNU/libgcrypt\cite{lib} library. 
-In order to inject the attack using the library we added a flag during the building of the s-expression relative to the plaintext e.g.:
+We test our attacks against the implementation of the RFC 6979\cite{rfc} in the GNU/libgcrypt library\cite{lib}. 
+Before start we are going to make a fast briefing about how you can use this library to create digital signature using dDSA. This step is fundamental in order to understand how we simulate the active side-channel attack via software.\\
+The GNU/libgcrypt library\cite{lib} makes heavily use of the so called S-expression\cite{sexp}: a convenient way to parse and store data. For example if we want to generate a dsa key pair we have to write these few lines of code:
 
-\begin{lstlisting}
-err = gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", hash_len , digest);
+\begin{lstlisting}[language=c]
+
+/* gcry_sexp_t is the data type used to store a S-expression */
+gcry_sexp_t dsa_key_pair , dsa_parms;
+
+/* 
+This function is used in order to build the S-expression 
+and store it in dsa_params. These parameters will
+tell to the gcry_pk_genkey the options used to generate the key.
+*/
+gcry_sexp_build(&dsa_parms,NULL,"(genkey(dsa (nbits 4:1024)))");
+
+/*
+Finally this is the function that will generate an 
+S-expression, stored in dsa_key_pair, that represent 
+the dsa key pair.
+*/
+gcry_pk_genkey(&dsa_key_pair,dsa_parms);
+  
 \end{lstlisting}
 
-When the function dsa-sign find that flag it redirects the flow to our faulty function that injects the desidered fault based on the type of the attack we want to perform.
+Now that we have a dsa key pair stored in the variable \texttt{dsa\_key\_pair} we can access its field simply:
+
+\begin{lstlisting}[language=c]
+
+/* get the generator of the group employed */
+gcry_sexp_t g_param = gcry_sexp_find_token(dsa_key_pair,"g",0);
+
+/* get the prime number 'p' employed */
+gcry_sexp_t p_param = gcry_sexp_find_token(dsa_key_pair,"p",0); 
+
+/* get the prime number 'q' employed */
+gcry_sexp_t q_param = gcry_sexp_find_token(dsa_key_pair,"q",0);
+
+/* get the private key 'x' */
+gcry_sexp_t x_param = gcry_sexp_find_token(dsa_key_pair,"x",0);
+
+/* get the g^x parameter */
+gcry_sexp_t y_param = gcry_sexp_find_token(dsa_key_pair,"y",0);
+
+\end{lstlisting}
+
+And signing a message is easy too:
+
+\begin{lstlisting}[language=c]
+
+/* 
+let's declare an mpi ( multiple precision number ) in order to 
+store the big numerical representation of the message to sign.
+*/
+gcry_mpi_t msg_digest;
+
+/*
+S-expression used in order to declare the plaintext to sign
+and receive the ciphertext from the DSA signing algorithm.
+*/
+gcry_sexp_t ciphertext , plaintext;
+
+
+/* 
+This is the SHA-1 of the message we want to sign. 
+in this case: "Hello world."
+*/    
+const unsigned char* digest = (const unsigned char * )         		"e44f3364019d18a151cab7072b5a40bb5b3e274f";
+    
+/*
+Specific function employed in the library that convert the 
+string representation of the message's digest in a multiple 
+precision number stored in the  variable 'msg_digest'.
+*/    
+gcry_mpi_scan(&msg_digest, GCRYMPI_FMT_USG, digest, 
+                     strlen((const char*) digest), NULL);
+
+/*
+Creation of the S-expression relative to the data to sign.
+Here you have to specify the flags rfc6979 in order to 
+make use of the deterministic DSA.
+You can see this S-expression as the list of options and
+parameters for the DSA signing transformation.
+*/  
+gcry_sexp_build(&plaintext, NULL, "(data (flags rfc6979) (hash %s %b))" , "sha1", 20 , msg_digest);
+
+/*
+Start the DSA signing transformation with the options
+and parameters passed in the previous step and get
+the result in the 'ciphertext' variable.
+*/
+gcry_pk_sign(&ciphertext, plaintext, dsa_key_pair);
+
+/*
+If we want we can also verify here the signature
+employing the publickey stored in teh variable
+'dsa_key_pair'.
+*/
+gcry_pk_verify (ciphertext, plaintext, dsa_key_pair);
+
+\end{lstlisting}
+
+We have presented how you can generate and use a pair of dsa key in order to sign a message using the dDSA specified in the RFC\cite{rfc}. \\
+In order to simulate the attack using the library we added a flag during the building of the S-expression relative to the parameters of the DSA signing transformation:
+
+\begin{lstlisting}[language=c]
+gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", hash_len , digest);
+\end{lstlisting}
+
+We have then modified a bit the library ( specifically the function \textit{dsa-sign} in the file \textit{/libgcrypt/cipher/dsa.c} in order to redirects the flow to our handcraft function that injects the desidered fault based on the type of the attack we want to perform, we will call this a small "attack dispatcher". In total we added 3 functions:
+\begin{itemize}
+\item \texttt{fault\_sign()}: when the flow is redirected to this function we trigger the attack 1 that will damage the exponentation ( more details in the next section )
+\item \texttt{fault\_sign\_2()}: calling this function we trigger the attack 2 that will damage the signature composition ( more details in the next section )
+\item \texttt{fault\_sign\_2\_byte()}: this is a second version of the attack 2
+\end{itemize}
+
+If the "attack dispatcher" doesn't find any "attack flag", the normal sign() function is called and we obtain the correct signature of the message. 
 
 \includegraphics[width=1.0\textwidth]{img/img_3.png} \\
 
-The next two paragraphs describe the two attacks type and then we present the result obtained.
+The next two paragraphs describe the two attacks, then we present the result obtained and finally some limits and considerations.
 
 \subsubsection{Damage the exponentation}
 
-Remembering from the DDSA scheme that we have to exponentiate the generator \textit{g} at the power of \textit{k}, we inject a bit fault into k during the exponentiation, obtaining g^{\tilde{k}} = \tilde{r} = r \cdot g^{\pm 2^{i}}.
+Remembering from the line 6 of the DSA-signing algorithm presented in the section 2.1.3 that we have to exponentiate the generator \textit{g} at the power of the deterministic generated \textit{k}, we injected a bit fault into \textit{k} during the exponentiation, obtaining: g^{\tilde{k}} = \tilde{r} = r \cdot g^{\pm 2^{i}}
 
-\begin{lstlisting}
 
-  [ FROM /libgcrypt/cipher/dsa.c fault_sign function ]
+\\The attack proceeds as follows:
 
-  [...]
-  
-  gcry_mpi_t one = mpi_set_ui(NULL, 1);  
-
-  gcry_mpi_t e = mpi_new(qbits);
-  
-  //calculate 2^bit_fault
-  mpi_mul_2exp(e, one, (unsigned long)bit_fault); 
-
-  gcry_mpi_t k_tilde = mpi_new(qbits);
-
-  //damage the k 
-  if( sign == 0 ) 
-     mpi_subm(k_tilde,k,e,skey->q); 
-  else 
-     mpi_addm(k_tilde,k,e,skey->q);
-
-  mpi_mul(sig_k, k_tilde, one);
-  
-  //****************** FAULT *********************//
-  mpi_powm( r, skey->g, k_tilde, skey->p );  
-  mpi_fdiv_r( r, r, skey->q );    
-  //****************** FAULT *********************//
-  
-  
-  [ ... ] 
-\end{lstlisting}
-
-The attacks proceeds as follows:
 \begin{itemize}
-\item Obtain the correct signature $s = k^{-1}(m + xr) $
-\item Obtain the faulty signature $\tilde{s} = k^{-1}(m + x\tilda{r})$
+\item Obtain the correct signature of the message m:  $s = k^{-1}(m + xr) $
+\item Obtain the faulty signature of the message m:  $\tilde{s} = k^{-1}(m + x\tilde{r})$
 \item Write the system:\\ \\\begin{cases} s = k^{-1}(m + xr) \\ \tilde{s} = k^{-1}(m + x\tilde{r}) \end{cases}\\
-\\with \textit{k} and \textit{x} are unknown.
+\\with \textit{k} and \textit{x} unknown.
 
 
 \item Solving,we  obtain:\\\\
@@ -246,54 +325,17 @@ k \equiv_{q} s^{-1}(mx+r)
 
 \end{itemize}
 
-
-This attack is very interesting because it doesn't need any bruteforce in order to discover the key: all the parameters that we need in the previous formula are available from the output of the correct and faulty algorithm.
-
-The correctness of the attack is checked by creating a new dsa-key-pair based on the private key calculated and by signing a new plaintext with that key and then try to verify the signature with the original public key.
-
+This attack is very fast and interesting because in order to calculate the private key \textit{x} we need only the outputs from the two signature ( the parameters \textit{r} and \textit{s} from the correct one and the faulty one ) and the message \textit{m} passed in plaintext on the channel. The complexity from the point of view of this attack is O(1).
+\\\\
+We checked the attack's correctness by creating a new dsa key pair based on the private key calculated and by signing a new plaintext with that key and then try to verify the signature with the public key of the original dsa key pair.
 
 \subsubsection{Damage the signature composition}
 
-For this attack we consider two level: a bit level and a byte level.\\\\ The bit level assume that with an active side channel attack we can surgically flip a single bit of k during the signature composition; this assumption is really optimistic and this precision can lead to a very fast cracking during the bruteforcing part of the algorithm.\\\\ The byte level is a more realistic assumption that we inject a fault of a byte inside the k; in this case the bruteforcing part of the attack will be slower , but the cost in order to inject the fault pratically is reduced.
+Remembering from the line 7 of the DSA-signing algorithm presented in the section 2.1.3 that we have to perform the multiplication s  = $k^{-1} \cdot (H(m) - s \cdot r)$ mod q , we injected a fault into k during this multiplication (in this case before the calculation of $k^{-1}$ , but it would be the same flipping the final result $k^{-1}$ ), obtaining: $\tilde{s} = \tilde{k}^{-1}(m + xr)$.
+
+For this attack we consider two type of fault: a bit level fault and a byte level one.\\\\ The bit level assume that with an active side channel attack we can surgically flip a single bit of k during the signature composition; this assumption is really optimistic.\\\\ The byte level is a more realistic assumption that we inject a fault of a byte inside the k; 
 
 \paragraph{Bit level fault}
-
-\begin{lstlisting}
- 
-  [ FROM /libgcrypt/cipher/dsa.c fault_sign_2 function ]
-
-  [...]
-  
-  mpi_powm( r, skey->g, k, skey->p );
-  mpi_fdiv_r( r, r, skey->q );
-
-  gcry_mpi_t one = mpi_set_ui(NULL, 1); 
-
-  //calculat 2^i ()
-  gcry_mpi_t e = mpi_new(qbits);
-  mpi_mul_2exp(e, one, (unsigned long) bit_fault);  
-
-  gcry_mpi_t k_tilde = mpi_new(mpi_get_nlimbs(k));
-  
-
-  //damage the k
-  if(sign==0)
-     mpi_subm(k_tilde,k,e,skey->q);  
-  else
-     mpi_addm(k_tilde,k,e,skey->q);
-
-  //****************** FAULT *********************//
-  
-  mpi_mul(sig_k, k_tilde, one);
-  
-  kinv = mpi_alloc( mpi_get_nlimbs(k) );
-  mpi_invm(kinv, k_tilde, skey->q );
-  
-  //****************** FAULT *********************//
-  
- [...]
-
-\end{lstlisting}
 
 The attacks with a bit fault proceeds as follows: 
 \begin{itemize}
@@ -305,54 +347,21 @@ The attacks with a bit fault proceeds as follows:
 
 \item In case of a positive fault $k+2^{i} $ we have \\$\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k+2^{i})^{-1}(m+xr)}$
 
-
 \item calulating k for both the case we have: \\$k_{faultpos} = \frac{\tilde{s}2^{i}}{s-\tilde{s}}$ \\
 $k_{faultneg} = \frac{\tilde{s}2^{i}}{\tilde{s}-s}$ \\
 
-\item Notice that in this case we need a bruteforce in order to discover the right \textit{i} ( which bit has been flipped, 0<=i<=qbits ) and so to finally calculate k
+\item After having calculate k, we can derive the private key x as:\\ $x = \frac{sk - m}{r}$
 
-\includegraphics[width=1.0\textwidth]{img/img_5.png} \\
-
-\item After discovered the k, we can calculate the private key x as:\\ $x = \frac{sk - m}{r}$
 
 \end{itemize}
 
+Notice that in this case we need the value of k in order to calculate x, but since we don't know where the fault has been injected during the attack ( this is a really realistic assumption ), we need a bruteforce in order to discover the right \textit{i} ( which bit has been flipped, 0<=i<=qbits ) and so to finally calculate k and then x.
+
+\includegraphics[width=1.0\textwidth]{img/img_5.png} \\
+
+
+
 \paragraph{Byte level fault}
-
-\begin {lstlisting}
-
-  [ FROM /libgcrypt/cipher/dsa.c   fault_sign_2_byte function ]
-  
-  [ ... ]
-  
-  mpi_powm( r, skey->g, k, skey->p );
-  mpi_fdiv_r( r, r, skey->q );
-
-  gcry_mpi_t one = mpi_set_ui(NULL, value_fault);   
-
-
-  gcry_mpi_t e = mpi_new(qbits);
-  mpi_mul_2exp(e, one, byte_fault);   
-
-  gcry_mpi_t k_tilde = mpi_new(mpi_get_nlimbs(k));
-
-  if(sign==0)
-     mpi_subm(k_tilde,k,e,skey->q);  
-  else
-     mpi_addm(k_tilde,k,e,skey->q);
-
-  //****************** FAULT *********************//
-  
-  mpi_mul(sig_k, k_tilde, one);
-  
-  kinv = mpi_alloc( mpi_get_nlimbs(k) );
-  mpi_invm(kinv, k_tilde, skey->q );
-
-  //****************** FAULT *********************//
-  
-  [ ... ]
-
-\end{lstlisting}
 
 The attacks with a byte fault proceeds as follows: 
 \begin{itemize}
@@ -376,40 +385,34 @@ $k_{faultneg} = \frac{\tilde{s}b2^{i}}{\tilde{s}-s}$ \\
 
 
 \end{itemize}
-\section{Results}
-We have tested these attacks on 4 key length:
+\section{Experimental results}
+We have tested these attacks using an AMD Quad-Core A8-4500M and 4GB ram with Xubuntu 14.04. 
+The implementation of the DDSA algorithm as specified in the RFC\cite{rfc} is taken from the libgcrypt library version 1.6.4 \cite{lib}.\\
+In order to test the attacks you have to copy our file dsa.c inside the folder /libgcrypt/cipher/.
+\\The experiments are conducted against 4 key length (expressed in the form pbits|qbits): 1024|160 , 2048|224 , 2048|256 , 3072|256.\\\\
+We have considered two scenario for each key length
 \begin{itemize}
-\item p = 1024 bit		q = 160 bit
-\item p = 2048 bit		q = 224 bit
-\item p = 2048 bit		q = 256 bit
-\item p = 3072 bit 		q = 256 bit
+\item optimal case: the fault happens on the first bit/byte of k; in this case we are lucky and we have the fastest possible cracking.
+\item worst case: the fault happens on the last bit/byte of k; in this case we are not lucky during the fault injection and we have the slowest possible cracking.
 \end{itemize}
-And with two scenarios for each length:
-\begin{itemize}
-\item optimal case: the fault happens on the first bit/byte of k 
-\item worst case: the fault happens on the last bit/byte of k
-\end{itemize}
-The resulting times are obtained using an AMD Quad-Core A8-4500M and 4GB ram.
+
 \subsection{Damage the exponentation}
 \begin{itemize}
 \item Bit level \ Byte level:
 
-In this attack the distincton between bit level and byte level has no meaning because the time complexity is alway O(c) regardless the type of the fault injected. The private key is cracked in less than one second even if the fault is injected at the word level.
+In this attack the distincton between bit level and byte level has no meaning because the time complexity is always O(1) regardless the type of the fault injected. The private key is cracked in less than one second even if the fault is injected at the word level.
 
 These are the average time necessary in order to complete the attack
-
-\begin{table}[!htbp]
-\centering
-\label{my-label}
-\begin{tabular}{|c|c|c|}
+\begin{center}
+\begin{tabular}{l*{6}{c}r}
+Key length        & Time [ms] \\
 \hline
-         & Avg time   \\ \hline
-Length 1 & 2.241930 ms \\ \hline
-Length 2 & 7.508261 ms \\ \hline
-Length 3 & 8.846499 ms \\ \hline
-Length 4 & 16.900461 ms \\ \hline
+1024/160 &       2.241930  \\
+2048/224 &       7.508261  \\
+2048/256 &       8.846499  \\
+3072/256 &      16.900461 \\ 
 \end{tabular}
-\end{table}
+\end{center}
 
 \end{itemize}
 
@@ -418,43 +421,47 @@ Length 4 & 16.900461 ms \\ \hline
 \begin{itemize}
 \item Bit level:
 
-\begin{table}[!htbp]
-\centering
-\label{my-label}
-\begin{tabular}{|c|c|c|}
+\begin{center}
+\begin{tabular}{l*{6}{c}r}
+Key length        & Optimal case [ms] & Worst case [ms] \\
 \hline
-         & Optimal case & Worst case     \\ \hline
-Length 1 & 4.953000 ms  & 295.578003 ms  \\ \hline
-Length 2 & 14.788000 ms & 1547.551025 ms \\ \hline
-Length 3 & 15.799001 ms & 2021.688965 ms \\ \hline
-Length 4 & 28.413000 ms & 3562.698975 ms \\ \hline
+1024/160 &        4.953000 & 295.578003  \\
+2048/224 &       14.788000 & 1547.551025  \\
+2048/256 &       15.799001 & 2021.688965  \\
+3072/256 &       28.413000 & 3562.698975  \\ 
 \end{tabular}
-\end{table}
-
+\end{center}
 
 \item Byte level:
-\begin{table}[!htbp]
-\centering
-\label{my-label}
-\begin{tabular}{|c|c|c|}
-\hline
-         & Optimal case & Worst case     \\ \hline
-Length 1 & 132.716995 ms  & 75677.210938 ms  \\ \hline
-Length 2 & 479.232025 ms & 290135.656250 ms \\ \hline
-Length 3 & 555.675049 ms & 447803.687500 ms \\ \hline
-Length 4 & 972.052002 ms & 841949.000000 ms \\ \hline
-\end{tabular}
-\end{table}
 
+\begin{center}
+\begin{tabular}{l*{6}{c}r}
+Key length        & Optimal case [ms] & Worst case [ms] \\
+\hline
+1024/160 &        132.716995 & 75677.210938  \\
+2048/224 &        479.232025 & 290135.656250  \\
+2048/256 &       555.675049  & 447803.687500  \\
+3072/256 &       972.052002  & 841949.000000  \\ 
+\end{tabular}
+\end{center}
 
 \end{itemize}
 
+\section{Limits}
+As presented before, in order to work the attacks presented need the parameters \textit{r} and \textit{s}, and two signatures ( the correct one and the faulty one ) of the same message \textit{m}; all this parameters are sent in plain over the untrusted channel, in fact \textit{r} and \textit{s} represent the signature sent and \textit{m} is the message to be verified ( with the dsa verify algorithm ) against the signature.\\
+The attacks fail if any of the previous condition aren't satisfied: we can't retreive the parameter \textit{r} or \textit{s}, we can't retreive the message \textit{m}, or we can't sign the message \textit{m} two times.\\\\
+Given this, a possible mitigation of these attack would be, for example, to protect the signature sended over the channel, or the  message sent, or why not both, with the public key of the destination; in this scenario we can't retreive enough parameters in order to satisfy the equations that calculate the private key.
+
+
+\section{Conclusion}
+According to the RFC\cite{rfc}, "the determinism of the algorithm described in this note may be useful to an attacker in some forms of side-channel attacks". With this paper we prove this fact by simulating two active side channel attacks via software that can retreive the private keys of a dsa key pair with any length. The descriptions of these attacks can be easily applied to a real scenario where the attacked system doesn't implement good countermeasures against side-channel attacks. Finally we proposed a possible easy mitigation against these attacks. 
 
 \addcontentsline{toc}{section}{\refname}
 \begin{thebibliography}{10}
-\bibitem{rfc} https://tools.ietf.org/html/rfc6979
-\bibitem{fips} http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
-\bibitem{lib}https://www.gnu.org/software/libgcrypt/
+\bibitem{rfc} \url{https://tools.ietf.org/html/rfc6979}
+\bibitem{fips} \url{http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf}
+\bibitem{lib} \url{https://www.gnu.org/software/libgcrypt/}
+\bibitem{sexp} \url{http://rosettacode.org/wiki/S-Expressions}
 \end{thebibliography}
 
 \end{document}

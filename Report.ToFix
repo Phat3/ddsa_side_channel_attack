@@ -1,0 +1,27 @@
+TO FIX REPORT:
+
+- Tempistiche da verificare ( quante cifre decimale tengo ) + dire di che tempi si tratta + spostare [ms] sopra nell'intestazione di colonna delle    tabelline  
+- Mettere tabelle senza bordi di merda 
+- Url da mettere in fondo alla reference X 
+- togliere 'fixed' private key/msg con 'given' 
+- Aggiungere conclusioni + limiti dell'attacco
+- Spiegare meglio il bruteforce 
+- Aggiungere specifica della macchina su cui si sono fatti i test con anche uname -ar 
+- Rinominare Results in Experimental Results 
+- usare algorithm package per scrivere ddsa verify and sign 
+- aggiungere nel README di verificare che la libgcrypt sia effettivamente cambiata 
+- aggiungere nella general overview il perchè ddsa è utile e perchè non lo si trova sulle normale macchine ( ampliare ) 
+- nel k deterministic generation aggiungere del perchè di quel giro ( legare nel modo più stretto possibile firma con PrivKey e messaggio )
+- In other digital signature algorithm mettere che questo attacco funziona anche con loro e mettere 2 parole su cosa sono
+- Togliere '...' ed 'etc' ovunque.
+- In the attack in practice aggiungere cosa sono le s-expression e perchè sono utili e spiegare un filo meglio come abbiamo aggiunto il tag di attacj ( magari commentando lo schemino ) 
+- In damage the exponentiation spostare la spiegazione dell'attacco matematico sopra e l'estratto di codice ( COMMENTATO!!! TOGLIENDO IL FROM ... e mettendo una didascalia + ricordarsi di togliere il codice di DEBUG  ) sotto 
+- In damage the exponentiation c'è un typo: • Obtain the faulty signature s  ̃ = k −1 (m + xr) , bisogna mettere r_tilda , NON r 
+- In damage the signature composition mettere prima la spiegazione matematica e spiegare perchè ci sono 2 livelli di astrazione dell'attacco ( bit e byte )
+- Generalizzare alla fine sull'injection del fault su bit a caso in tutto k ( cosa succede? come si generalizza l'attacco? ) 
+- In Results, ripetere contro cosa abbiamo testato il nostro attacco e spostare all'inizio le specifiche della macchina.
+- Aggiungere le complessità per fare l'attacco e vedere se scalano con i tempo che abbiamo registrato 
+- In Results aggiungere oltre a 'p' e 'q' anche 'g' ed il sottogruppo 
+- Spiegare meglio worst and best case delle tempistiche prese
+- Fare media dei tempi per rompere la chiave private anche per il secondo attacco
+-  
