@@ -11,6 +11,7 @@
 \usepackage{amsmath}
 \usepackage{titlesec}
 \usepackage[linesnumbered, ruled]{algorithm2e}
+\usepackage{float}
  
 \setcounter{secnumdepth}{4}
 
@@ -155,7 +156,10 @@ This proposal make deterministic the signing, NOT the generation of keys that MU
 The generation of the deterministic \textit{k} depends only from the message to sign and the private key.\\
 According to the RFC, given the input message and a private key, the following process is applied for the generation:
 
+\begin{figure}[H]
 \includegraphics[width=1.0\textwidth]{img/img_2.png} \\
+\caption{Generation of deterministic K parameter as specified in the RFC 6979} 
+\end{figure}
 
 \begin{itemize}
 \item qlen = binary length of the prime number \textit{q}
@@ -299,7 +303,10 @@ We have then modified a bit the library ( specifically the function \textit{dsa-
 
 If the "attack dispatcher" doesn't find any "attack flag", the normal sign() function is called and we obtain the correct signature of the message. 
 
+\begin{figure}[H]
 \includegraphics[width=1.0\textwidth]{img/img_3.png} \\
+\caption{The schematization of the "attack dispatcher"}
+\end{figure}
 
 The next two paragraphs describe the two attacks, then we present the result obtained and finally some limits and considerations.
 
@@ -325,40 +332,87 @@ k \equiv_{q} s^{-1}(mx+r)
 
 \end{itemize}
 
-This attack is very fast and interesting because in order to calculate the private key \textit{x} we need only the outputs from the two signature ( the parameters \textit{r} and \textit{s} from the correct one and the faulty one ) and the message \textit{m} passed in plaintext on the channel. The complexity from the point of view of this attack is O(1).
+
+This attack is very fast and interesting because in order to calculate the private key \textit{x} we need only the outputs from the two signature ( the parameters \textit{r} and \textit{s} from the correct one and the parameters \textit{r} and \textit{s} from the faulty one ) and the message \textit{m} passed in plaintext on the channel. The complexity of this attack is basically O(1) since it involves only the resolution of an equation.
 \\\\
 We checked the attack's correctness by creating a new dsa key pair based on the private key calculated and by signing a new plaintext with that key and then try to verify the signature with the public key of the original dsa key pair.
 
 \subsubsection{Damage the signature composition}
 
-Remembering from the line 7 of the DSA-signing algorithm presented in the section 2.1.3 that we have to perform the multiplication s  = $k^{-1} \cdot (H(m) - s \cdot r)$ mod q , we injected a fault into k during this multiplication (in this case before the calculation of $k^{-1}$ , but it would be the same flipping the final result $k^{-1}$ ), obtaining: $\tilde{s} = \tilde{k}^{-1}(m + xr)$.
+Remembering from the line 7 of the DSA-signing algorithm presented in the section 2.1.3 that we have to perform the multiplication s  = $k^{-1} \cdot (H(m) - s \cdot r)$ mod q , we injected a fault into \textit{k} during this multiplication (in this case before the calculation of $k^{-1}$ , but it would be the same flipping the final result $k^{-1}$ ), obtaining: $\tilde{s} = \tilde{k}^{-1}(m + xr)$.
+\\\\
+For this attack we have to consider two type of possible injected fault: a bit level fault and a byte level one. The bit level assume that with an active side channel attack we can surgically flip a single bit of \textit{k} during the signature composition, while the byte level is a more realistic assumption that we inject a fault of a whole byte inside the k. Other possible injected fault would be at DWORD level, QWORD level, and the more generic fault with different bit flipped in different position inside k. As said for this attack we consider only the bit and byte injected fault model, we will generalize at the end for the others.In order to model a complete random and not guessable fault we consider both the cases of a positive bit/byte injection and negative bit/byte injection.
 
-For this attack we consider two type of fault: a bit level fault and a byte level one.\\\\ The bit level assume that with an active side channel attack we can surgically flip a single bit of k during the signature composition; this assumption is really optimistic.\\\\ The byte level is a more realistic assumption that we inject a fault of a byte inside the k; 
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/attack2bit.png} \\
+\caption{\label{f_etichetta}Attack2 with a positive injected bit fault }
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/attack2bitneg.png} \\
+\caption{\label{f_etichetta}Attack2 with a negative injected bit fault }
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/attack2byte.png} \\
+\caption{\label{f_etichetta}Attack2 with a positive injected byte fault }
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/attack2byteneg.png} \\
+\caption{\label{f_etichetta}Attack2 with a negative injected byte fault }
+\end{figure}
+
 
 \paragraph{Bit level fault}
 
-The attacks with a bit fault proceeds as follows: 
+The attacks with an injected bit fault proceeds as follows: 
 \begin{itemize}
 \item Obtain the correct signature $s = k^{-1}(m + xr) $
 \item Obtain the faulty signature $\tilde{s} = \tilde{k}^{-1}(m + xr)$
-\item Notice that \\$\frac{s}{\tilde{s}}  = \frac{k^{-1}(m+xr)}{\tilde{k}^{-1}(m+xr)}$
+\item Notice that \\\\$\frac{s}{\tilde{s}}  = \frac{k^{-1}(m+xr)}{\tilde{k}^{-1}(m+xr)}$
 
-\item In case of a negative fault $k-2^{i} $ we have\\ $\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k-2^{i})^{-1}(m+xr)}$
+\item In case of a positive fault $k+2^{i} $ we have \\\\$\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k+2^{i})^{-1}(m+xr)}$
 
-\item In case of a positive fault $k+2^{i} $ we have \\$\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k+2^{i})^{-1}(m+xr)}$
+\item In case of a negative fault $k-2^{i} $ we have\\\\ $\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k-2^{i})^{-1}(m+xr)}$
 
-\item calulating k for both the case we have: \\$k_{faultpos} = \frac{\tilde{s}2^{i}}{s-\tilde{s}}$ \\
-$k_{faultneg} = \frac{\tilde{s}2^{i}}{\tilde{s}-s}$ \\
+\item calulating k for both the case we have: \\\\$k_{faultpos} = \frac{\tilde{s}2^{i}}{s-\tilde{s}}$ \\
+$k_{faultneg} = \frac{\tilde{s}2^{i}}{\tilde{s}-s}$ 
 
-\item After having calculate k, we can derive the private key x as:\\ $x = \frac{sk - m}{r}$
+\item After having calculated k, we can derive the private key x as:\\\\ $x = \frac{sk - m}{r}$
 
 
 \end{itemize}
 
-Notice that in this case we need the value of k in order to calculate x, but since we don't know where the fault has been injected during the attack ( this is a really realistic assumption ), we need a bruteforce in order to discover the right \textit{i} ( which bit has been flipped, 0<=i<=qbits ) and so to finally calculate k and then x.
+Notice that in this case we need the value of \textit{k} in order to calculate \textit{x}.Obviously we don't have it a priori, but we can discover it trying to bruteforce the exponent \textit{i} of 2 in the formula $k_{faultpos} = \frac{\tilde{s}2^{i}}{s-\tilde{s}}$,so basically we calculate k for every possible \textit{i} such that 0<=i<=qbits and we try to derive \textit{x} employing the just calculated \textit{k} with the formula $x = \frac{sk - m}{r}$, finally if our correctness check it's succesfull we can conclude that was the correct \textit{k} and so this is the correct private key \textit{x} calculated, otherwise we try with another \textit{i} and restart.
 
-\includegraphics[width=1.0\textwidth]{img/img_5.png} \\
+\begin{algorithm}[H]
+  \KwData{A message \textit{m}, the correct signature <r,s> , the faulty signature <r,$\tilde{s}$>}
+  \KwResult{The private key \textit{x} of the dsa key pair employed to sign the message \textit{m}}
+  
+  i=0\;
+  
+  //\textit{trying all the possibilities for positive faults}\;
+  \While{i $<=$ qbits}{
+  $k_{faultpos} = \frac{\tilde{s}2^{i}}{s-\tilde{s}}$\;
+  $x = \frac{sk - m}{r}$\;
+  \eIf{correctness-check(x)==True}{print "dDSA private key cracked!"\;return 1\;}{ i++\;continue\;}
+  }
 
+  i=0\;  
+  
+  //\textit{trying all the possibilities for negative faults}\;
+  \While{i $<=$ qbits}{
+  $k_{faultneg} = \frac{\tilde{s}2^{i}}{\tilde{s}-s}$ \;
+  $x = \frac{sk - m}{r}$\;
+  \eIf{correctness-check(x)==True}{print "dDSA private key cracked!"\;return 1\;}{ i++\;continue\;}
+  }
+  
+  print "Something went wrong"\;
+  return -1
+
+  \caption{Attack 2, bit level}
+\end{algorithm}
 
 
 \paragraph{Byte level fault}
@@ -367,21 +421,57 @@ The attacks with a byte fault proceeds as follows:
 \begin{itemize}
 \item Obtain the correct signature $s = k^{-1}(m + xr) $
 \item Obtain the faulty signature $\tilde{s} = \tilde{k}^{-1}(m + xr)$
-\item Notice that \\$\frac{s}{\tilde{s}}  = \frac{k^{-1}(m+xr)}{\tilde{k}^{-1}(m+xr)}$
+\item Notice that \\\\$\frac{s}{\tilde{s}}  = \frac{k^{-1}(m+xr)}{\tilde{k}^{-1}(m+xr)}$
 
-\item In case of a negative fault $k-b2^{i} $ we have\\ $\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k-b2^{i})^{-1}(m+xr)}$
+\item In case of a negative fault $k-b2^{i} $ we have\\\\ $\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k-b2^{i})^{-1}(m+xr)}$
 
-\item In case of a positive fault $k+b2^{i} $ we have \\$\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k+b2^{i})^{-1}(m+xr)}$
+\item In case of a positive fault $k+b2^{i} $ we have \\\\$\frac{s}{\tilde{s}} = \frac{k^{-1}(m+xr)}{(k+b2^{i})^{-1}(m+xr)}$
 
 
-\item calulating k for both the case we have: \\$k_{faultpos} = \frac{\tilde{s}b2^{i}}{s-\tilde{s}}$ \\
+\item calulating k for both the case we have: \\\\$k_{faultpos} = \frac{\tilde{s}b2^{i}}{s-\tilde{s}}$ \\
 $k_{faultneg} = \frac{\tilde{s}b2^{i}}{\tilde{s}-s}$ \\
 
-\item Notice that in this case we need a bruteforce in order to discover the right \textit{b} and \textit{i} ( which byte has been flipped, 0<=i<=qbits and the value of the fault b, 0<=b<=255) and so to finally calculate k. The index \textit{i} is the value of the shift of the fault value b (we are trying all the possible value, for all the possible shift).
+\item After discovered the k, we can calculate the private key x as:\\\\ $x = \frac{sk - m}{r}$
 
-\includegraphics[width=1.0\textwidth]{img/img_4.png} \\
+Notice that in this case, as before, we need a bruteforce in order to discover the right \textit{b} and \textit{i} ( which byte has been flipped, 0<=i<=qbits and the value of the fault b, 0<=b<=255) and so to finally calculate \textit{k}. The index \textit{i} is the value of the shift of the fault value b (we are trying all the possible value, for all the possible shift).
 
-\item After discovered the k, we can calculate the private key x as:\\ $x = \frac{sk - m}{r}$
+\begin{algorithm}[H]
+  \KwData{A message \textit{m}, the correct signature <r,s> , the faulty signature <r,$\tilde{s}$>}
+  \KwResult{The private key \textit{x} of the dsa key pair employed to sign the message \textit{m}}
+  
+  i=0\;
+  b=0\;
+  
+  //\textit{trying all the possibilities for positive faults}\;
+  \While{i $<=$ qbits}{
+  \While{b $<=$ 255}{
+  $k_{faultpos} = \frac{\tilde{s}b2^{i}}{s-\tilde{s}}$\;
+  $x = \frac{sk - m}{r}$\;
+  \eIf{correctness-check(x)==True}{print "dDSA private key cracked!"\;return 1\;}{ b++\;continue\;}
+  }
+  b=0\;
+  i++\;  
+  }
+
+  i=0\;  
+  b=0\;
+  
+  //\textit{trying all the possibilities for negative faults}\;
+  \While{i $<=$ qbits}{
+  \While{b $<=$ 255}{
+  $k_{faultneg} = \frac{\tilde{s}b2^{i}}{\tilde{s}-s}$\;
+  $x = \frac{sk - m}{r}$\;
+  \eIf{correctness-check(x)==True}{print "dDSA private key cracked!"\;return 1\;}{ b++\;continue\;}
+  }
+  b=0\;
+  i++\;  
+  }
+  print "Something went wrong"\;
+  return -1
+
+  \caption{Attack 2, byte level}
+\end{algorithm}
+
 
 
 \end{itemize}
@@ -398,9 +488,10 @@ We have considered two scenario for each key length
 
 \subsection{Damage the exponentation}
 \begin{itemize}
-\item In this attack the distincton between bit level and byte level has no meaning because the time complexity is always O(1) regardless the type of the fault injected. The private key is cracked in less than one second even if the fault is injected at the word level.
+\item In this attack the distincton between bit level and byte level has no meaning because the time complexity is always O(1) regardless the type of the fault injected. 
 
-These are the average time necessary in order to complete the attack
+These are the average time necessary in order to complete the attack and so retreive the private key:
+
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
 Key length        & Time [ms] \\
@@ -417,6 +508,9 @@ Key length        & Time [ms] \\
 
 \subsection{Damage the signature composition}
 \begin{itemize}
+
+These are the average time necessary in order to complete the attack, at the bit level, in order to retreive the private key:\\
+
 \item Bit level:
 
 \begin{center}
@@ -429,6 +523,8 @@ Key length        & Optimal case [ms] & Worst case [ms] \\
 3072/256 &       28.413000 & 3562.698975  \\ 
 \end{tabular}
 \end{center}
+
+These are the average time necessary in order to complete the attack, at the byte level, in order to retreive the private key:\\
 
 \item Byte level:
 
