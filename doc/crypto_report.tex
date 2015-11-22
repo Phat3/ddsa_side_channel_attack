@@ -93,9 +93,9 @@ In order to be a sound digital signature schemes the following properties must h
 
 \subsubsection{DSA mathematical structure}
 
-The reference group category is $(\mathbb{Z}^{*}_{p},\cdot )$ , \textit{p} prime s.t. \textit{q} | ( \textit{p-1} )} with \textit{q} also prime. The employed algebraic structure is then the multiplicative cyclic subgroup \textit{G} = <\textit{g}> with publicly known generator \textit{g} and order \textit{q}.
+The reference group category is $(\mathbb{Z}^{*}_{p},\cdot )$, \textit{p} prime s.t. \textit{q} | ( \textit{p-1} )} with \textit{q} also prime. The employed algebraic structure is then the multiplicative cyclic subgroup \textit{G} = <\textit{g}> with publicly known generator \textit{g} and order \textit{q}.
 \\\\
-In the FIPS 186-3\cite{fips} standardization the number of bits of the two prime numbers (L = $log_{2}(p)$ N = $log_{2}(q)$ ) are setted to: 1024|160 , 2048|224 , 2048|256 and 3072|256.
+In the FIPS 186-3\cite{fips} standardization the number of bits of the two prime numbers (L = $log_{2}(p)$ N = $log_{2}(q)$ ) are setted to: 1024|160, 2048|224, 2048|256 and 3072|256.
 
 \subsubsection{Cryptoscheme}
 
@@ -341,7 +341,7 @@ We checked the attack's correctness by creating a new dsa key pair based on the 
 
 Remembering from the line 7 of the DSA-signing algorithm presented in the section 2.1.3 that we have to perform the multiplication s  = $k^{-1} \cdot (H(m) - s \cdot r)$ mod q , we injected a fault into \textit{k} during this multiplication (in this case before the calculation of $k^{-1}$ , but it would be the same flipping the final result $k^{-1}$ ), obtaining: $\tilde{s} = \tilde{k}^{-1}(m + xr)$.
 \\\\
-For this attack we have to consider two type of possible injected fault: a bit level fault and a byte level one. The bit level assume that with an active side channel attack we can surgically flip a single bit of \textit{k} during the signature composition, while the byte level is a more realistic assumption that we inject a fault of a whole byte inside the k. Other possible injected fault would be at DWORD level, QWORD level, and the more generic fault with different bit flipped in different position inside k. As said for this attack we consider only the bit and byte injected fault model, we will generalize at the end for the others.In order to model a complete random and not guessable fault we consider both the cases of a positive bit/byte injection and negative bit/byte injection.
+For this attack we have to consider two type of possible injected fault: a bit level fault and a byte level one. The bit level assume that with an active side channel attack we can surgically flip a single bit of \textit{k} during the signature composition, while the byte level is a more realistic assumption that we inject a fault of a whole byte inside the k. Other possible injected fault would be at WORD level,DWORD level, QWORD level, and the more generic fault with different bit flipped in different position inside k ( for example the MSB and the LSB in the most general case ). As said for this attack we consider only the bit and byte injected fault model, we will generalize at the end for the others.In order to model a complete random and not guessable fault we consider both the cases of a positive bit/byte injection and negative bit/byte injection.
 
 \begin{figure}[H]
 \includegraphics[width=1.0\textwidth]{img/attack2bit.png} \\
@@ -414,6 +414,7 @@ Notice that in this case we need the value of \textit{k} in order to calculate \
   \caption{Attack 2, bit level}
 \end{algorithm}
 
+The complexity of the algorithm is O(2n) where n=qbits. 
 
 \paragraph{Byte level fault}
 
@@ -474,10 +475,32 @@ Notice that in this case, as before, we need a bruteforce in order to discover t
 \end{algorithm}
 \end{itemize}
 
+The complexity of the algorithm is O(2 \cdot 255 \cdot n) where n=qbits.
 
 \subsection{Generalizing the attacks}
+During the explanation of the attack 2 we said that we considered only two injection models: the bit level and the byte level, but since often you can't control precisely where the injected fault will hit, a fault can be spread in a position larger than a byte, for example can be at WORD level, DWORD level, or at the QWORD level. 
 
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/attack2word.png} \\
+\caption{\label{f_etichetta}Attack2 with a positive injected word fault }
+\end{figure}
 
+The algorithm for the attack remain the same, but in this case the nested cycle described in the algorithm-4 at lines 5 and 23, will be: \textit{while b <= $2^_{16}$} and since qbits depends on the length of the key we have a complexity of O($2^_{16}$ \cdot qbits). With the longest key size considered (p=3072,q=256) we will have a number of iteration of $2^_{16}$ \cdot $2^{8} = 2^_{24}$; in order to compute this we would need a better parallelized algorithm using a framework like OpenCL \cite{opencl}.
+
+The same thing applies to the DWORD level (32 bit) and the QWORD level (64 bit) the first will have a max. number of iteration of: $2^_{32}$ \cdot $2^{8} = 2^_{40}$, the latter will have a max. number of iteration of: $2^_{64}$ \cdot $2^{8} = 2^_{72}$.
+
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/attack2dword.png} \\
+\caption{\label{f_etichetta}Attack2 with a positive injected dword fault }
+\end{figure}
+
+Notice that a fault injected at QWORD level is the max. that we can handle, in fact handling a wider fault will require inside our attack's algorithm a number of iteration greater that $2^_{80}$ that is unfeasible; by the way a fault at the byte/WORD level is good and feasible.\\\\
+Finally we can say that if we have a fault that had hitten two bits that can't be grouped in a byte/WORD/DWORD/QWORD our attack2 is not feasible, but as said before the injection of a fault at WORD level is usually feasible; If we can't inject a fault that we can handle we can in any case switch to attack1 since it doesn't need this step as explained previously.
+
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/attackfail.png} \\
+\caption{\label{f_etichetta}Attack2 will fail in these cases }
+\end{figure}
 
 \section{Experimental results}
 We have tested these attacks using an AMD Quad-Core A8-4500M and 4GB ram with Xubuntu 14.04. 
@@ -500,6 +523,7 @@ We have considered two scenario for each key length
 \includegraphics[width=1.0\textwidth]{img/worstcasebitfault.png} \\
 \caption{\label{f_etichetta}Attack2, bit level with the worst scenario }
 \end{figure}
+
 
 \subsection{Damage the exponentation}
 \begin{itemize}
@@ -559,7 +583,7 @@ Key length        & Optimal case [ms] & Worst case [ms] \\
 \section{Limits}
 As presented before, in order to work the attacks presented need the parameters \textit{r} and \textit{s}, and two signatures ( the correct one and the faulty one ) of the same message \textit{m}; all this parameters are sent in plain over the untrusted channel, in fact \textit{r} and \textit{s} represent the signature sent and \textit{m} is the message to be verified ( with the dsa verify algorithm ) against the signature.\\
 The attacks fail if any of the previous condition aren't satisfied: we can't retreive the parameter \textit{r} or \textit{s}, we can't retreive the message \textit{m}, or we can't sign the message \textit{m} two times.\\\\
-Given this, a possible mitigation of these attack would be, for example, to protect the signature sended over the channel, or the  message sent, or why not both, with the public key of the destination; in this scenario we can't retreive enough parameters in order to satisfy the equations that calculate the private key.
+Given that, a possible mitigation of these attack would be, for example, to protect the signature sended over the channel, or the  message sent, or why not both, with the public key of the destination; in this scenario we can't retreive enough parameters in order to satisfy the equations that calculate the private key.
 
 
 \section{Conclusion}
@@ -571,6 +595,7 @@ According to the RFC\cite{rfc}, "the determinism of the algorithm described in t
 \bibitem{fips} \url{http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf}
 \bibitem{lib} \url{https://www.gnu.org/software/libgcrypt/}
 \bibitem{sexp} \url{http://rosettacode.org/wiki/S-Expressions}
+\bibitem{opencl} \url{https://www.khronos.org/opencl/}
 \end{thebibliography}
 
 \end{document}
