@@ -439,6 +439,7 @@ Notice that in this case, as before, we need a bruteforce in order to discover t
   \KwData{A message \textit{m}, the correct signature <r,s> , the faulty signature <r,$\tilde{s}$>}
   \KwResult{The private key \textit{x} of the dsa key pair employed to sign the message \textit{m}}
   
+  
   i=0\;
   b=0\;
   
@@ -471,20 +472,34 @@ Notice that in this case, as before, we need a bruteforce in order to discover t
 
   \caption{Attack 2, byte level}
 \end{algorithm}
-
-
-
 \end{itemize}
+
+
+\subsection{Generalizing the attacks}
+
+
+
 \section{Experimental results}
 We have tested these attacks using an AMD Quad-Core A8-4500M and 4GB ram with Xubuntu 14.04. 
 The implementation of the DDSA algorithm as specified in the RFC\cite{rfc} is taken from the libgcrypt library version 1.6.4 \cite{lib}.\\
 In order to test the attacks you have to copy our file dsa.c inside the folder /libgcrypt/cipher/.
-\\The experiments are conducted against 4 key length (expressed in the form pbits|qbits): 1024|160 , 2048|224 , 2048|256 , 3072|256.\\\\
+\\The experiments are performed against 4 key length (expressed in the form pbits|qbits): 1024|160 , 2048|224 , 2048|256 , 3072|256.\\\\
 We have considered two scenario for each key length
 \begin{itemize}
-\item optimal case: the fault happens on the first bit/byte of k; in this case we are lucky and we have the fastest possible cracking.
-\item worst case: the fault happens on the last bit/byte of k; in this case we are not lucky during the fault injection and we have the slowest possible cracking.
+\item optimal case: the fault happens on the LS[Bit/Byte] of \textit{k}; in this case we are lucky and we have the fastest possible cracking.
+
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/bestcasebitfault.png} \\
+\caption{\label{f_etichetta}Attack2, bit level with the best scenario }
+\end{figure}
+
+\item worst case: the fault happens on the MS[Bit/Byte] of \textit{k}; in this case we are not lucky during the fault injection and we have the slowest possible cracking.
 \end{itemize}
+
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/worstcasebitfault.png} \\
+\caption{\label{f_etichetta}Attack2, bit level with the worst scenario }
+\end{figure}
 
 \subsection{Damage the exponentation}
 \begin{itemize}
