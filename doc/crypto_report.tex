@@ -516,12 +516,23 @@ We have considered two scenario for each key length
 \caption{\label{f_etichetta}Attack2, bit level with the best scenario }
 \end{figure}
 
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/attack2bestbyte.png} \\
+\caption{\label{f_etichetta}Attack2, byte level with the best scenario }
+\end{figure}
+
+
 \item worst case: the fault happens on the MS[Bit/Byte] of \textit{k}; in this case we are not lucky during the fault injection and we have the slowest possible cracking.
 \end{itemize}
 
 \begin{figure}[H]
 \includegraphics[width=1.0\textwidth]{img/worstcasebitfault.png} \\
 \caption{\label{f_etichetta}Attack2, bit level with the worst scenario }
+\end{figure}
+
+\begin{figure}[H]
+\includegraphics[width=1.0\textwidth]{img/attack2byteworst.png} \\
+\caption{\label{f_etichetta}Attack2, byte level with the worst scenario }
 \end{figure}
 
 The times are taken using the C function \texttt{clock\_t clock(void)} that returns the sum of user and system time. On our 32 bits system it give a maximum possible precision of 1$\mu$s.
