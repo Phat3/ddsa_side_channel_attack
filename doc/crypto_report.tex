@@ -485,7 +485,7 @@ During the explanation of the attack 2 we said that we considered only two injec
 \caption{\label{f_etichetta}Attack2 with a positive injected word fault }
 \end{figure}
 
-The algorithm for the attack remain the same, but in this case the nested cycle described in the algorithm-4 at lines 5 and 23, will be: \textit{while b <= $2^_{16}$} and since qbits depends on the length of the key we have a complexity of O($2^_{16}$ \cdot qbits). With the longest key size considered (p=3072,q=256) we will have a number of iteration of $2^_{16}$ \cdot $2^{8} = 2^_{24}$; in order to compute this we would need a better parallelized algorithm using a framework like OpenCL \cite{opencl}.
+The algorithm for the attack remain the same, but in this case the nested cycle described in the algorithm-4 at lines 5 and 23, will be: \textit{while b <= $2^_{16}$} and since qbits depends on the length of the key we have a complexity of O($2^_{16}$ \cdot qbits). With the longest key size considered (p=3072,q=256) we will have a number of iteration of $2^_{16}$ \cdot $2^{8} = 2^_{24}$; in order to compute this we would need a better parallelized algorithm using a framework like OpenCL\cite{opencl}.
 
 The same thing applies to the DWORD level (32 bit) and the QWORD level (64 bit) the first will have a max. number of iteration of: $2^_{32}$ \cdot $2^{8} = 2^_{40}$, the latter will have a max. number of iteration of: $2^_{64}$ \cdot $2^{8} = 2^_{72}$.
 
@@ -541,7 +541,7 @@ The times are taken using the C function \texttt{clock\_t clock(void)} that retu
 
 In this attack the distincton between bit/byte/WORD/DWORD/QWORD level has no meaning because the time complexity is always O(1) regardless the type of the fault injected. 
 
-These are the average time necessary in order to complete the attack and so retreive the private key:
+Ihese are the average time necessary in order to complete 10 times the attack,for each key length, and so retreive the private key:
 
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
@@ -557,7 +557,7 @@ Key length        & Time [ms] \\
 
 \subsection{Damage the signature composition}
 
-These are the average time necessary in order to complete the attack, at the \textbf{bit level}, in order to retreive the private key:\\
+These are the time necessary in order to complete the attack, at the \textbf{bit level}, in order to retreive the private key:\\
 
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
