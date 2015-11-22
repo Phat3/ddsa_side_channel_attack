@@ -524,10 +524,11 @@ We have considered two scenario for each key length
 \caption{\label{f_etichetta}Attack2, bit level with the worst scenario }
 \end{figure}
 
+The times are taken using the C function \texttt{clock\_t clock(void)} that returns the sum of user and system time. On our 32 bits system it give a maximum possible precision of 1$\mu$s.
 
 \subsection{Damage the exponentation}
-\begin{itemize}
-\item In this attack the distincton between bit level and byte level has no meaning because the time complexity is always O(1) regardless the type of the fault injected. 
+
+In this attack the distincton between bit/byte/WORD/DWORD/QWORD level has no meaning because the time complexity is always O(1) regardless the type of the fault injected. 
 
 These are the average time necessary in order to complete the attack and so retreive the private key:
 
@@ -535,50 +536,41 @@ These are the average time necessary in order to complete the attack and so retr
 \begin{tabular}{l*{6}{c}r}
 Key length        & Time [ms] \\
 \hline
-1024/160 &       2.241930  \\
-2048/224 &       7.508261  \\
-2048/256 &       8.846499  \\
-3072/256 &      16.900461 \\ 
+1024/160 &       2.241  \\
+2048/224 &       7.508  \\
+2048/256 &       8.846  \\
+3072/256 &      16.900 \\ 
 \end{tabular}
 \end{center}
-
-\end{itemize}
 
 
 \subsection{Damage the signature composition}
-\begin{itemize}
 
-These are the average time necessary in order to complete the attack, at the bit level, in order to retreive the private key:\\
-
-\item Bit level:
+These are the average time necessary in order to complete the attack, at the \textbf{bit level}, in order to retreive the private key:\\
 
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
 Key length        & Optimal case [ms] & Worst case [ms] \\
 \hline
-1024/160 &        4.953000 & 295.578003  \\
-2048/224 &       14.788000 & 1547.551025  \\
-2048/256 &       15.799001 & 2021.688965  \\
-3072/256 &       28.413000 & 3562.698975  \\ 
+1024/160 &        4.953 & 295.578  \\
+2048/224 &       14.788 & 1547.551  \\
+2048/256 &       15.799 & 2021.688  \\
+3072/256 &       28.413 & 3562.698 \\ 
 \end{tabular}
 \end{center}
 
-These are the average time necessary in order to complete the attack, at the byte level, in order to retreive the private key:\\
-
-\item Byte level:
+These are the average time necessary in order to complete the attack, at the \textbf{byte level}, in order to retreive the private key:\\
 
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
 Key length        & Optimal case [ms] & Worst case [ms] \\
 \hline
-1024/160 &        132.716995 & 75677.210938  \\
-2048/224 &        479.232025 & 290135.656250  \\
-2048/256 &       555.675049  & 447803.687500  \\
-3072/256 &       972.052002  & 841949.000000  \\ 
+1024/160 &        132.716 & 75677.210  \\
+2048/224 &        479.232 & 290135.656  \\
+2048/256 &       555.675  & 447803.687  \\
+3072/256 &       972.052 & 841949.000  \\ 
 \end{tabular}
 \end{center}
-
-\end{itemize}
 
 \section{Limits}
 As presented before, in order to work the attacks presented need the parameters \textit{r} and \textit{s}, and two signatures ( the correct one and the faulty one ) of the same message \textit{m}; all this parameters are sent in plain over the untrusted channel, in fact \textit{r} and \textit{s} represent the signature sent and \textit{m} is the message to be verified ( with the dsa verify algorithm ) against the signature.\\
