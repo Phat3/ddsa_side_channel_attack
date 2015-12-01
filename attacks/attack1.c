@@ -213,25 +213,16 @@ int main( int argc , char * argv[]){
 
     //*************** ATTACK THE CIPHER FOR THE 3 STANDARD DSA KEY LENGTH ********************//
     int i = 0;
-    int j = 0;
 
     puts("\n");
 
     clock_t t1, t2;
 
-    for(i = 0; i<4; i++){
+    for(i = 3; i<4; i++){
         printed = 0;
-        float sum = 0;
     	printf("******** ATTACKING %s ******* \n" , files[i]);
-        for(j = 0; j < 100; j++){
-            t1 = clock();
-            attack(i,digest,hash_len);
-            t2 = clock();
-            float diff = (((float)t2 - (float)t1) / 1000000.0F ) * 1000; 
-            sum = sum + diff;
-        }          
- 
-        printf("\nPRIVATE KEY CRACKED IN %f ms ON AVERAGE\n " , sum/100 );
+        attack(i,digest,hash_len);
+        printf("\nPRIVATE KEY CRACKED\n ");
      	printf("\n\n");
     
     }

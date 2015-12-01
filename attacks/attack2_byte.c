@@ -176,46 +176,48 @@ void attack(int i, unsigned char *digest, int hash_len){
        gcry_mpi_t twoi = gcry_mpi_new(e);
        gcry_mpi_mul_2exp(empi, one, e);   // twoi = 2^e
        
-	for( j=0; j< 256 ; j++){
+    	for( j=0; j< 256 ; j++){
+            
+            gcry_mpi_t jmpi = gcry_mpi_set_ui(NULL,j);
+    	       gcry_mpi_mulm(twoi,jmpi,empi,q);
+      
+        	//retrieve k
+            gcry_mpi_mulm(tmp, s_tilda, twoi, q); // s_tilda*(2^e) modq q
+            gcry_mpi_subm(result, s_tilda, s, q); // s_tilda - s mod q
+            gcry_mpi_invm(result, result, q); // (s_tilda - s mod q)^-1
+            gcry_mpi_mulm(result,result, tmp, q); // s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
+
+            //retrieve x
+            gcry_mpi_mulm(result, s, result,q); // s*k mod q
+            gcry_mpi_subm(result, result, m, q); // s*k - m mod q
+            gcry_mpi_mulm(result, result,r,q); //(s*k -m)*r^-1 mod q
+
+            err = gcry_sexp_build(&new_dsa_key_pair,NULL,
+                         "(key-data"
+                         " (public-key"
+                         "  (dsa(p%m)(q%m)(g%m)(y%m)))"
+                         " (private-key"
+                         "  (dsa(p%m)(q%m)(g%m)(y%m)(x%m))))",
+                        p,q,g,y,p,q,g,y,result);
+
+            err = gcry_pk_sign(&ctx2, plaintext, new_dsa_key_pair);
+
+            err = gcry_pk_verify(ctx2, plaintext, dsa_key_pair);
         
-        gcry_mpi_t jmpi = gcry_mpi_set_ui(NULL,j);
-	gcry_mpi_mulm(twoi,jmpi,empi,q);
-  
-    	//retrieve k
-        gcry_mpi_mulm(tmp, s_tilda, twoi, q); // s_tilda*(2^e) modq q
-        gcry_mpi_subm(result, s_tilda, s, q); // s_tilda - s mod q
-        gcry_mpi_invm(result, result, q); // (s_tilda - s mod q)^-1
-        gcry_mpi_mulm(result,result, tmp, q); // s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
+            if (err) {
+                //puts("gcrypt: verify failed");
+    	    continue;
+            }
+            else{
+                printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
+        	    printf("[DBG] BYTE : %d * 2^%d  FAULT: k-j*2^%d\n" , j , (int)e,(int)e); //DEBUG 
+                DEBUG_MPI_PRINT(result,"X = ");
+        	    printf("\n");
+          	    return;  
+            }
 
-        //retrieve x
-        gcry_mpi_mulm(result, s, result,q); // s*k mod q
-        gcry_mpi_subm(result, result, m, q); // s*k - m mod q
-        gcry_mpi_mulm(result, result,r,q); //(s*k -m)*r^-1 mod q
-
-        err = gcry_sexp_build(&new_dsa_key_pair,NULL,
-                     "(key-data"
-                     " (public-key"
-                     "  (dsa(p%m)(q%m)(g%m)(y%m)))"
-                     " (private-key"
-                     "  (dsa(p%m)(q%m)(g%m)(y%m)(x%m))))",
-                    p,q,g,y,p,q,g,y,result);
-
-        err = gcry_pk_sign(&ctx2, plaintext, new_dsa_key_pair);
-
-        err = gcry_pk_verify(ctx2, plaintext, dsa_key_pair);
-    
-        if (err) {
-            //puts("gcrypt: verify failed");
-	    continue;
         }
-        else{
-            printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
-    	    printf("[DBG] BYTE : %d * 2^%d  FAULT: k-j*2^%d\n" , j , (int)e,(int)e); //DEBUG 
-            DEBUG_MPI_PRINT(result,"X = ");
-	    printf("\n");
-  	    return;  
-        }
-      }
+
     }
     
     for(e = 0; e < qbits; e++){
@@ -224,52 +226,47 @@ void attack(int i, unsigned char *digest, int hash_len){
        gcry_mpi_t twoi = gcry_mpi_new(e);
        gcry_mpi_mul_2exp(empi, one, e);   // twoi = 2^e
        
-	for( j=0; j< 256 ; j++){
+    	for( j=0; j< 256 ; j++){
+            
+            gcry_mpi_t jmpi = gcry_mpi_set_ui(NULL,j);
+    	    gcry_mpi_mulm(twoi,jmpi,empi,q);
+      
+            //retrieve k
+            gcry_mpi_mulm(tmp, s_tilda, twoi, q); // s_tilda*(2^e) modq q
+            gcry_mpi_subm(result, s, s_tilda, q); // s_tilda - s mod q
+            gcry_mpi_invm(result, result, q); // (s_tilda - s mod q)^-1
+            gcry_mpi_mulm(result,result, tmp, q); // s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
+
+            //retrieve x
+            gcry_mpi_mulm(result, s, result,q); // s*k mod q
+            gcry_mpi_subm(result, result, m, q); // s*k - m mod q
+            gcry_mpi_mulm(result, result,r,q); //(s*k -m)*r^-1 mod q
+
+
+            err = gcry_sexp_build(&new_dsa_key_pair,NULL,
+                         "(key-data"
+                         " (public-key"
+                         "  (dsa(p%m)(q%m)(g%m)(y%m)))"
+                         " (private-key"
+                         "  (dsa(p%m)(q%m)(g%m)(y%m)(x%m))))",
+                        p,q,g,y,p,q,g,y,result);
+
+            err = gcry_pk_sign(&ctx2, plaintext, new_dsa_key_pair);
+
+            err = gcry_pk_verify(ctx2, plaintext, dsa_key_pair);
         
-        gcry_mpi_t jmpi = gcry_mpi_set_ui(NULL,j);
-	gcry_mpi_mulm(twoi,jmpi,empi,q);
-  
-        //retrieve k
-        gcry_mpi_mulm(tmp, s_tilda, twoi, q); // s_tilda*(2^e) modq q
-        gcry_mpi_subm(result, s, s_tilda, q); // s_tilda - s mod q
-        gcry_mpi_invm(result, result, q); // (s_tilda - s mod q)^-1
-        gcry_mpi_mulm(result,result, tmp, q); // s_tilda*(2^3)  mod q)*(s_tilda - s mod q)^-1 === k
-
-        gcry_mpi_dump(result);
-        printf("\n");
-
-        //retrieve x
-        gcry_mpi_mulm(result, s, result,q); // s*k mod q
-        gcry_mpi_subm(result, result, m, q); // s*k - m mod q
-        gcry_mpi_mulm(result, result,r,q); //(s*k -m)*r^-1 mod q
-
-        gcry_mpi_dump(result);   //WORKING!!
-        printf("\n");
-
-        err = gcry_sexp_build(&new_dsa_key_pair,NULL,
-                     "(key-data"
-                     " (public-key"
-                     "  (dsa(p%m)(q%m)(g%m)(y%m)))"
-                     " (private-key"
-                     "  (dsa(p%m)(q%m)(g%m)(y%m)(x%m))))",
-                    p,q,g,y,p,q,g,y,result);
-
-        err = gcry_pk_sign(&ctx2, plaintext, new_dsa_key_pair);
-
-        err = gcry_pk_verify(ctx2, plaintext, dsa_key_pair);
-    
-        if (err) {
-            continue;
+            if (err) {
+                continue;
+            }
+            else{
+                printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
+        	    printf("[DBG] BYTE : %d * 2^%d  FAULT: k+j*2^%d\n" , j , (int)e,(int)e); //DEBUG 
+                DEBUG_MPI_PRINT(result,"X = ");
+        	    printf("\n");
+          	    return;  
+            }
         }
-        else{
-            printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
-    	    printf("[DBG] BYTE : %d * 2^%d  FAULT: k+j*2^%d\n" , j , (int)e,(int)e); //DEBUG 
-            DEBUG_MPI_PRINT(result,"X = ");
-	    printf("\n");
-  	    return;  
-        }	
-    }
-  }    
+    }    
 }
 
 
@@ -292,24 +289,14 @@ int main( int argc , char * argv[]){
 
     //*************** ATTACK THE CIPHER FOR THE 3 STANDARD DSA KEY LENGTH ********************//
     int i = 0;
-    clock_t t1, t2;
  
     puts("\n");
 
-    for(i = 0; i<4; i++){
-	
-	printf("******** ATTACKING %s ******* \n" , files[i]);
- 	t1 = clock(); 
+    for(i = 0; i<1; i++){
+    	printf("******** ATTACKING %s ******* \n" , files[i]);
         attack(i,digest,hash_len);
-	t2 = clock(); 
-
-	float diff = (((float)t2 - (float)t1) / 1000000.0F ) * 1000;  
- 
-	printf("PRIVATE KEY CRACKED IN %f ms\n " , diff );
-
-
- 	printf("\n\n");
-    
+    	printf("\nPRIVATE KEY CRACKED\n ");
+        printf("\n\n");  
     }
  }
 

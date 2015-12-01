@@ -193,14 +193,14 @@ void attack(int i, unsigned char *digest, int hash_len){
     
         if (err) {
             //puts("gcrypt: verify failed");
-	    continue;
+	       continue;
         }
         else{
             printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
     	    printf("[DBG] BIT: %d  FAULT: k-2^e\n" , (int)e); //DEBUG 
             DEBUG_MPI_PRINT(result,"X = ");
-	    printf("\n");
-  	    return;   
+    	    printf("\n");
+      	    return;   
         }
 
 
@@ -235,14 +235,14 @@ void attack(int i, unsigned char *digest, int hash_len){
     
         if (err) {
             //puts("gcrypt: verify failed");
-	    continue;
+	       continue;
         }
         else{
-  	    printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
+  	        printf("\n[!!!]PRIVATE KEY %d %d BITS CRACKED!!\n" , pbits,qbits );
     	    printf("[DBG] BIT: %d  FAULT: k+2^e\n" , (int)e); //DEBUG 
-	    DEBUG_MPI_PRINT(result,"X = ");
-	    printf("\n");
-  	    return;   
+    	    DEBUG_MPI_PRINT(result,"X = ");
+    	    printf("\n");
+      	    return;   
         }
 
     }
@@ -268,24 +268,14 @@ int main( int argc , char * argv[]){
 
     //*************** ATTACK THE CIPHER FOR THE 3 STANDARD DSA KEY LENGTH ********************//
     int i = 0;
-    clock_t t1, t2;
  
     puts("\n");
 
-    for(i = 0; i<4; i++){
-	
-	printf("******** ATTACKING %s ******* \n" , files[i]);
- 	t1 = clock(); 
+    for(i = 0; i<4; i++){	
+    	printf("******** ATTACKING %s ******* \n" , files[i]);
         attack(i,digest,hash_len);
-	t2 = clock(); 
-
-	float diff = (((float)t2 - (float)t1) / 1000000.0F ) * 1000;  
- 
-	printf("PRIVATE KEY CRACKED IN %f ms\n " , diff );
-
-
- 	printf("\n\n");
-    
+    	printf("PRIVATE KEY CRACKED\n ");
+     	printf("\n\n");  
     }
 
 }

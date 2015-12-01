@@ -1066,6 +1066,9 @@ fault_sign (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey,
   mpi_powm( r, skey->g, k_tilde, skey->p );   //r = g^k_tilda mod p ----> g^(k - 2^i) mod p
   mpi_fdiv_r( r, r, skey->q );    //r = (g^k_tilda mod p) mod q ----> (g^(k - 2^i) mod p) mod q
 
+   _gcry_mpi_release(one);
+  _gcry_mpi_release(e);
+
   //****************** END FAULT *********************//
 
   /* kinv = k^(-1) mod q */
@@ -1172,6 +1175,9 @@ fault_sign_2 (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey
   kinv = mpi_alloc( mpi_get_nlimbs(k) );
   mpi_invm(kinv, k_tilde, skey->q );
 
+   _gcry_mpi_release(one);
+  _gcry_mpi_release(e);
+
   //log_mpidump("hash is   hash", hash);
 
   //****************** END FAULT *********************//
@@ -1275,6 +1281,8 @@ fault_sign_2_byte (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key 
   mpi_invm(kinv, k_tilde, skey->q );
 
   //log_mpidump("hash is   hash", hash);
+   _gcry_mpi_release(one);
+  _gcry_mpi_release(e);
 
   //****************** END FAULT *********************//
 
@@ -1374,6 +1382,9 @@ fault_sign_4 (gcry_mpi_t r, gcry_mpi_t s, gcry_mpi_t input, DSA_secret_key *skey
 
   //DEBUG ---- Pass the value of k fault to our attack program
   mpi_mul(sig_k, kinv, one);
+
+  _gcry_mpi_release(one);
+  _gcry_mpi_release(e);
   
   //log_mpidump("hash is   hash", hash);
 
@@ -1480,7 +1491,7 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
   else{
      //if the flag for the attack 2 is set call the faulty signature that inject the fault the creation of s damaging the k but not the r
      if(par2){
-        rc = fault_sign_2(sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo, sig_k , i , flip);
+        rc = fault_sign_2(sig_r, sig_s, data, &sk, ctx.flags, ctx.hash_algo, sig_k , i, flip);
      }
      
      else{
@@ -1517,6 +1528,7 @@ dsa_sign (gcry_sexp_t *r_sig, gcry_sexp_t s_data, gcry_sexp_t keyparms)
  leave:
   _gcry_mpi_release (sig_r);
   _gcry_mpi_release (sig_s);
+  _gcry_mpi_release (sig_k);
   _gcry_mpi_release (sk.p);
   _gcry_mpi_release (sk.q);
   _gcry_mpi_release (sk.g);
