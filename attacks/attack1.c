@@ -211,7 +211,7 @@ int main( int argc , char * argv[]){
     //the ascii and the hex representations are 40 bytes long and this broke the HMAC computation when you try to sign your message 
     gcry_md_hash_buffer(GCRY_MD_SHA1, digest, message, strlen(message));
 
-    //*************** ATTACK THE CIPHER FOR THE 3 STANDARD DSA KEY LENGTH ********************//
+    //*************** ATTACK THE CIPHER FOR THE 4 STANDARD DSA KEY LENGTH ********************//
     int i = 0;
 
     puts("\n");

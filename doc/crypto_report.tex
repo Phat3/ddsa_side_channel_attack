@@ -287,8 +287,8 @@ gcry_pk_verify (ciphertext, plaintext, dsa_key_pair);
 
 \end{lstlisting}
 
-We have presented how you can generate and use a pair of dsa key in order to sign a message using the dDSA specified in the RFC\cite{rfc}. \\
-In order to simulate the attack using the library we added a flag during the building of the S-expression relative to the parameters of the DSA signing transformation:
+We have presented how you can generate and use a pair of dsa key in order to sign a message using the dDSA specified in the RFC\cite{rfc}. \\\\
+In order to simulate the attack using the library we added an "attack parameter" (in the next example \textit{attack2}) during the building of the S-expression relative to the parameters of the DSA signing transformation:
 
 \begin{lstlisting}[language=c]
 gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", hash_len , digest);
@@ -301,7 +301,7 @@ We have then modified a bit the library ( specifically the function \textit{dsa-
 \item \texttt{fault\_sign\_2\_byte()}: this is a second version of the attack 2
 \end{itemize}
 
-If the "attack dispatcher" doesn't find any "attack flag", the normal sign() function is called and we obtain the correct signature of the message. 
+If the "attack dispatcher" doesn't find any "attack parameter", the normal sign() function is called and we obtain the correct signature of the message. 
 
 \begin{figure}[H]
 \includegraphics[width=1.0\textwidth]{img/img_3.png} \\
@@ -503,13 +503,17 @@ Finally we can say that if we have a fault that had hitten two bits that can't b
 \end{figure}
 
 \section{Experimental results}
-We have tested these attacks using an AMD Quad-Core A8-4500M and 4GB ram with Xubuntu 14.04. 
+We have tested these attacks using an Intel i5 and 2GB ram with Xubuntu 14.04. 
 The implementation of the DDSA algorithm as specified in the RFC\cite{rfc} is taken from the libgcrypt library version 1.6.4 \cite{lib}.\\
-In order to test the attacks you have to copy our file dsa.c inside the folder /libgcrypt/cipher/.
-\\The experiments are performed against 4 key length (expressed in the form pbits|qbits): 1024|160 , 2048|224 , 2048|256 , 3072|256.\\\\
-We have considered two scenario for each key length
+In order to test the attacks you have to copy our file dsa.c inside the folder /libgcrypt/cipher/ and the recompile the whole library.
+\\The experiments are performed against 4 key length (expressed in the form pbits|qbits): 1024|160 , 2048|224 , 2048|256 , 3072|256.\\
+
+
+For the attack 2, during the fault injection, we have to consider a completely random fault that range from an optimal case to the worst possible case.( As explained before this model is not necessary for the attack 1 because its success is independent from where the fault happens )
+
 \begin{itemize}
 \item optimal case: the fault happens on the LS[Bit/Byte] of \textit{k}; in this case we are lucky and we have the fastest possible cracking.
+
 
 \begin{figure}[H]
 \includegraphics[width=1.0\textwidth]{img/bestcasebitfault.png} \\
@@ -535,53 +539,65 @@ We have considered two scenario for each key length
 \caption{\label{f_etichetta}Attack2, byte level with the worst scenario }
 \end{figure}
 
-The times are taken using the C function \texttt{clock\_t clock(void)} that returns the sum of user and system time. On our 32 bits system it give a maximum possible precision of 1$\mu$s.
+For this reason the attack's time estimated with a single run would be an imprecise measure.In order to give a better estimation of the attack's time we have randomized in the library code where the fault happen and taken the average time produced by 30 attack's rounds.The times are taken using the C function \texttt{clock\_t clock(void)} that returns the sum of user and system time and on our 32 bits system it give a maximum possible precision of 1$\mu$s.The registered times include also the generation of the original signature and the validation step of the attack.
 
 \subsection{Damage the exponentation}
 
 In this attack the distincton between bit/byte/WORD/DWORD/QWORD level has no meaning because the time complexity is always O(1) regardless the type of the fault injected. 
+\\
+These are the average times necessary in order to complete the attacks,for each key length:
 
-Ihese are the average time necessary in order to complete 10 times the attack,for each key length, and so retreive the private key:
 
+\begin{table}[H]
+\caption{ Average times registered for attack 1 produced by 30 runs}
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
 Key length        & Time [ms] \\
 \hline
-1024/160 &       2.241  \\
-2048/224 &       7.508  \\
-2048/256 &       8.846  \\
-3072/256 &      16.900 \\ 
+1024/160 &       0.645  \\
+2048/224 &       2.083  \\
+2048/256 &       2.379  \\
+3072/256 &       4.600  \\ 
 \end{tabular}
 \end{center}
+\end{table}
+
 
 
 \subsection{Damage the signature composition}
 
-These are the time necessary in order to complete the attack, at the \textbf{bit level}, in order to retreive the private key:\\
+These are the time necessary in order to complete the attack at the bit level and byte level.
+\\
 
+\begin{table}[H]
+\caption{Average times registered for attack 2 at the bit level, produced by 30 runs}
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
-Key length        & Optimal case [ms] & Worst case [ms] \\
+Key length        & Time [ms] \\
 \hline
-1024/160 &        4.953 & 295.578  \\
-2048/224 &       14.788 & 1547.551  \\
-2048/256 &       15.799 & 2021.688  \\
-3072/256 &       28.413 & 3562.698 \\ 
+1024/160 &      50.672  \\
+2048/224 &      7.292   \\
+2048/256 &     204.662  \\
+3072/256 &     431.644  \\ 
 \end{tabular}
 \end{center}
+\end{table}
 
-These are the average time necessary in order to complete the attack, at the \textbf{byte level}, in order to retreive the private key:\\
 
+\begin{table}[H]
+\caption{Average times registered for attack 2 at the byte level, produced by 30 runs}
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
-Key length        & Optimal case [ms] & Worst case [ms] \\
+Key length        & Time [ms] \\
 \hline
-1024/160 &        132.716 & 75677.210  $\mathtt{\sim}$ 1.5 min.\\
-2048/224 &        479.232 & 290135.656 $\mathtt{\sim}$ 4 min. \\
-2048/256 &       555.675  & 447803.687 $\mathtt{\sim}$ 7 min.   \\
-3072/256 &       972.052 & 841949.000 $\mathtt{\sim}$ 14 min.  \\ 
+1024/160 &        666.924\\
+2048/224 &       1859.158 $\mathtt{\sim}$ 2 sec. \\
+2048/256 &       3507.466 $\mathtt{\sim}$ 3 sec.   \\
+3072/256 &       8611.887 $\mathtt{\sim}$ 8 sec.  \\ 
 \end{tabular}
 \end{center}
+\end{table}
+
 
 \section{Limits}
 As presented before, in order to work the attacks presented need the parameters \textit{r} and \textit{s}, and two signatures ( the correct one and the faulty one ) of the same message \textit{m}; all this parameters are sent in plain over the untrusted channel, in fact \textit{r} and \textit{s} represent the signature sent and \textit{m} is the message to be verified ( with the dsa verify algorithm ) against the signature.\\
