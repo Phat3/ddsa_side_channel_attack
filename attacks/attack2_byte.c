@@ -292,7 +292,7 @@ int main( int argc , char * argv[]){
  
     puts("\n");
 
-    for(i = 0; i<1; i++){
+    for(i = 0; i<4; i++){
     	printf("******** ATTACKING %s ******* \n" , files[i]);
         attack(i,digest,hash_len);
     	printf("\nPRIVATE KEY CRACKED\n ");

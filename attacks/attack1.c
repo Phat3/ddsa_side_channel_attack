@@ -218,7 +218,7 @@ int main( int argc , char * argv[]){
 
     clock_t t1, t2;
 
-    for(i = 3; i<4; i++){
+    for(i = 0; i<4; i++){
         printed = 0;
     	printf("******** ATTACKING %s ******* \n" , files[i]);
         attack(i,digest,hash_len);
