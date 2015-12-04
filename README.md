@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Based on the attack formulated by [Gerardo Pelosi](http://home.deib.polimi.it/pelosi/doku.php) and [Alessandro Barenghi](http://home.deib.polimi.it/barenghi/doku.php) we have implemented the following two active side channel attacks against the deterministic version of the Digital Signature Algorithm ( from now on DDSA ) as specified in the [RFC 6979](https://tools.ietf.org/html/rfc6979).
+Based on the attack formulated by [Gerardo Pelosi](http://home.deib.polimi.it/pelosi/doku.php) and [Alessandro Barenghi](http://home.deib.polimi.it/barenghi/doku.php) we have implemented the following two active side channel attacks against the deterministic version of the Digital Signature Algorithm as specified in the [RFC 6979](https://tools.ietf.org/html/rfc6979).
 These attacks can lead directly to a leak of the private key and therefore breaking the authenticity of the signatures created using this algorithm.
 
 
