@@ -84,7 +84,7 @@ We have to bruteforce all the possible values for i so the algorithm runs in O(n
 
 ## More information
 
-For a better and a complete explanation of these attacks see the Report.pdf inside the repository.
+For a better and a complete explanation of these attacks see the crypto_report.pdf inside the folder /doc.
 
 
 ## Contributors
