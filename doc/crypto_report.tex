@@ -65,9 +65,9 @@
 \tableofcontents
 
 \section{Introduction}
-In this paper we want to present two active side channel attacks against the deterministic version of the Digital Signature Algorithm ( from now on DDSA ) as specified in the RFC 6979\cite{rfc}.\\
+In this paper we want to present two active side channel attacks against the deterministic version of the Digital Signature Algorithm ( from now on dDSA ) as specified in the RFC 6979\cite{rfc}.\\
 These attacks can lead directly to a leak of the private key and therefore breaking the authenticity of the signatures created using this algorithm. \\\\
-We will proceed in this way: first we provide some useful background in order to understand better the paper, then we explain the attacks in details and finally we present the feasibility of the attack by showing the time needed to break the DSA with some of the keysize currently available.
+We will proceed in this way: first we provide some useful background in order to understand better this paper, then we explain the attacks in details and finally we present the feasibility of the attacks by showing the time needed to break the dDSA with some of the keysize currently available.
 
 \section{Background}
 
@@ -86,8 +86,8 @@ In order to be a sound digital signature schemes the following properties must h
 
 \begin{itemize} 
 \item the authenticity of a signature generated from a given message and a given private key can be verified by using the corresponding public key.
-\item it should be computationally infeasible to generate a valid signature for a party without knowing that party's private key. 
-\item The private key MUST remain private, otherwise the authenticity of the signature created with that key is broken.
+\item it should be computationally unfeasible to generate a valid signature for an user without knowing that users's private key. 
+\item The private key MUST remains private, otherwise the authenticity of the signatures created with that key are broken.
 \item The public key owner MUST be verifiable, otherwise we can't assure that we had receive a message from a particoular source.
 \end{itemize}
 
@@ -99,8 +99,11 @@ In the FIPS 186-3\cite{fips} standardization the number of bits of the two prime
 
 \subsubsection{Cryptoscheme}
 
-Public  Key: $k_{pub} = (p,q,g,g^s)$ \\
-Private Key: $k_{priv} = s \in \mathbb{Z}^{*}_{q}$
+Public  Key: $k_{pub} = (p,q,g,g^x)$ \\
+Private Key: $k_{priv} = x \in \mathbb{Z}^{*}_{q}$
+\\\\
+In the following algorithm H stands for an hash function chosen at the beginning of the transformation.
+
 \\
 
 \begin{algorithm}[H]
@@ -112,7 +115,7 @@ Private Key: $k_{priv} = s \in \mathbb{Z}^{*}_{q}$
   \While{r == 0 or s == 0}{
     k = rand() $\in \mathbb{Z}^{*}_{q}$ \;
     r = $((g^k)$ mod p $)$ mod q \;
-    s = $k^{-1} \cdot (H(m) - s \cdot r)$ mod q\; 
+    s = $k^{-1} \cdot (H(m) - x \cdot r)$ mod q\; 
   }
   signature = <\texit{r},\textit{s}>\;
   send(m,signature)\;
@@ -145,8 +148,8 @@ Private Key: $k_{priv} = s \in \mathbb{Z}^{*}_{q}$
 \subsection{The Deterministic Digital Signature Algorithm}
 
 \subsubsection{General overview}
-The step in the DSA signing algorithm that requires to generate a random parameter ( a "true" random number, not a pseudorandom one ) needs a great source of randomness in order to be secure; on normal PCs we can generate sound random numbers by exploiting unpredictable data like entropy, the exact time an user press keys on keyboard, the position of the mouse at a specific time, or any other kind of event. \\\\Dealing with embedded system is a problem from this point of view,in fact we don't have, on board, a real randomness source as before and so not a great RNG to generate unpredictable random numbers for our algorithm! \\This is the crucial point for which many manufacturers decide to employ RSA cryptosystem, that doesn't require random number during the encryption transformation, rather than DSA/ECDSA, the latter in fact require by design a true random number for the encryption transformation.\\
-\\The Deterministic DSA proposed in the RFC 6979\cite{rfc} tries to "safely derandomize" the step in the algorithm that needs a true random number for the \textit{k} parameter in order to increase the attractiveness of such system in the embedded world ( smart card, credit card, console or any other kind of board). The security relies on whether the deterministic generation of k is indistinguishable from the output of a random oracle.\\\\
+The step in the DSA signing algorithm that requires to generate a random parameter ( a "true" random number, not a pseudorandom one ) needs a great source of randomness in order to be secure; on normal PCs we can generate sound random numbers by exploiting unpredictable data like entropy, the exact time an user press keys on keyboard, the position of the mouse at a specific time, or any other kind of event. \\\\Dealing with embedded systems is a problem from this point of view,in fact we don't have, on board, a real randomness source as before and so not a great RNG to generate unpredictable random numbers for our algorithm! \\This is the crucial point for which many manufacturers decide to employ RSA cryptosystem, that doesn't require random number during the encryption transformation, rather than DSA/ECDSA, the latter in fact require by design a true random number for the encryption transformation.\\
+\\The Deterministic DSA proposed in the RFC 6979\cite{rfc} tries to "safely derandomize" the step in the algorithm that needs a true random number for the \textit{k} parameter in order to increase the attractiveness of such system in the embedded world ( smart card, credit card, console or any other kind of board). The security relies on whether the deterministic generation of \textit{k} is indistinguishable from the output of a random oracle.\\\\
 Remember that,in any way, we need a good RNG in order to generate a strong private key. 
 This proposal make deterministic the signing, NOT the generation of keys that MUST be non deterministic and made a priopri.
 
@@ -186,7 +189,7 @@ In order to inject a fault we can use different techniques that range from using
 \subsection{The attacks}
 
 We test our attacks against the implementation of the RFC 6979\cite{rfc} in the GNU/libgcrypt library\cite{lib}. 
-Before start we are going to make a fast briefing about how you can use this library to create digital signature using dDSA. This step is fundamental in order to understand how we simulate the active side-channel attack via software.\\
+Before start we are going to make a fast briefing about how you can use this library to create digital signature using dDSA. This step is fundamental in order to understand how we simulate the active side-channel attacks via software.\\
 The GNU/libgcrypt library\cite{lib} makes heavily use of the so called S-expression\cite{sexp}: a convenient way to parse and store data. For example if we want to generate a dsa key pair we have to write these few lines of code:
 
 \begin{lstlisting}[language=c]
@@ -294,7 +297,7 @@ In order to simulate the attack using the library we added an "attack parameter"
 gcry_sexp_build(&ptx2, NULL, "(data (flags rfc6979) (hash %s %b) (attack2))" , "sha1", hash_len , digest);
 \end{lstlisting}
 
-We have then modified a bit the library ( specifically the function \textit{dsa-sign} in the file \textit{/libgcrypt/cipher/dsa.c} in order to redirects the flow to our handcraft function that injects the desidered fault based on the type of the attack we want to perform, we will call this a small "attack dispatcher". In total we added 3 functions:
+We have then modified a bit the library ( specifically the function \textit{dsa-sign} in the file \textit{/libgcrypt/cipher/dsa.c}) in order to redirects the flow to our functions that injects the desidered fault based on the type of the attack we want to perform, we will call this a small "attack dispatcher". In total we added 3 functions:
 \begin{itemize}
 \item \texttt{fault\_sign()}: when the flow is redirected to this function we trigger the attack 1 that will damage the exponentation ( more details in the next section )
 \item \texttt{fault\_sign\_2()}: calling this function we trigger the attack 2 that will damage the signature composition ( more details in the next section )
@@ -312,15 +315,14 @@ The next two paragraphs describe the two attacks, then we present the result obt
 
 \subsubsection{Damage the exponentation}
 
-Remembering from the line 6 of the DSA-signing algorithm presented in the section 2.1.3 that we have to exponentiate the generator \textit{g} at the power of the deterministic generated \textit{k}, we injected a bit fault into \textit{k} during the exponentiation, obtaining: g^{\tilde{k}} = \tilde{r} = r \cdot g^{\pm 2^{i}}
+Remembering from the line 6 of the DSA-signing algorithm presented in the section 2.1.3 that we have to exponentiate the generator \textit{g} at the power of the deterministic generated \textit{k}, we injected a bit fault into \textit{k} during the exponentiation, obtaining: g^{\tilde{k}} = \tilde{r} = r \cdot g^{\pm $2^{i}$}. Keep in mind that in the following formula with \textit{m} we indicate the result of H(\textit{m}).
 
-
-\\The attack proceeds as follows:
+\\\\The attack proceeds as follows:
 
 \begin{itemize}
 \item Obtain the correct signature of the message m:  $s = k^{-1}(m + xr) $
 \item Obtain the faulty signature of the message m:  $\tilde{s} = k^{-1}(m + x\tilde{r})$
-\item Write the system:\\ \\\begin{cases} s = k^{-1}(m + xr) \\ \tilde{s} = k^{-1}(m + x\tilde{r}) \end{cases}\\
+\item Write the system:\\ \\\begin{cases} s \equiv_{q} k^{-1}(m + xr) \\ \tilde{s} \equiv_{q}  k^{-1}(m + x\tilde{r}) \end{cases}\\
 \\with \textit{k} and \textit{x} unknown.
 
 
@@ -333,15 +335,15 @@ k \equiv_{q} s^{-1}(mx+r)
 \end{itemize}
 
 
-This attack is very fast and interesting because in order to calculate the private key \textit{x} we need only the outputs from the two signature ( the parameters \textit{r} and \textit{s} from the correct one and the parameters \textit{r} and \textit{s} from the faulty one ) and the message \textit{m} passed in plaintext on the channel. The complexity of this attack is basically O(1) since it involves only the resolution of an equation.
+This attack is very fast and interesting because in order to calculate the private key \textit{x} we need only the outputs from the two signatures ( the parameters \textit{r} and \textit{s} from the correct one and the parameters \textit{r} and \textit{s} from the faulty one ) and the message \textit{m} passed in plaintext on the channel. The complexity of this attack is basically O(1) since it involves only the resolution of an equation.
 \\\\
 We checked the attack's correctness by creating a new dsa key pair based on the private key calculated and by signing a new plaintext with that key and then try to verify the signature with the public key of the original dsa key pair.
 
 \subsubsection{Damage the signature composition}
 
-Remembering from the line 7 of the DSA-signing algorithm presented in the section 2.1.3 that we have to perform the multiplication s  = $k^{-1} \cdot (H(m) - s \cdot r)$ mod q , we injected a fault into \textit{k} during this multiplication (in this case before the calculation of $k^{-1}$ , but it would be the same flipping the final result $k^{-1}$ ), obtaining: $\tilde{s} = \tilde{k}^{-1}(m + xr)$.
+Remembering from the line 7 of the DSA-signing algorithm presented in the section 2.1.3 that we have to perform the multiplication s  = $k^{-1} \cdot (H(m) - x \cdot r)$ mod q , we injected a fault into \textit{k} during this multiplication (in this case before the calculation of $k^{-1}$ , but it would be the same flipping the final result $k^{-1}$ ), obtaining: $\tilde{s} = \tilde{k}^{-1}(m + xr)$.
 \\\\
-For this attack we have to consider two type of possible injected fault: a bit level fault and a byte level one. The bit level assume that with an active side channel attack we can surgically flip a single bit of \textit{k} during the signature composition, while the byte level is a more realistic assumption that we inject a fault of a whole byte inside the k. Other possible injected fault would be at WORD level,DWORD level, QWORD level, and the more generic fault with different bit flipped in different position inside k ( for example the MSB and the LSB in the most general case ). As said for this attack we consider only the bit and byte injected fault model, we will generalize at the end for the others.In order to model a complete random and not guessable fault we consider both the cases of a positive bit/byte injection and negative bit/byte injection.
+For this attack we have to consider two type of possible injected fault: a bit level fault and a byte level one. The bit level assume that with an active side channel attack we can surgically flip a single bit of \textit{k} during the signature composition, while the byte level is a more realistic assumption that we inject a fault of a whole byte inside the k. Other possible injected fault would be at WORD level,DWORD level, QWORD level, and the more generic fault with different bit flipped in different positions inside \textit{k} ( for example the MSB and the LSB in the most general case ). As said for this attack we consider only the bit and byte injected fault model, we will generalize at the end for the others.In order to model a complete random and not guessable fault we consider both the cases of a positive bit/byte injection and negative bit/byte injection.
 
 \begin{figure}[H]
 \includegraphics[width=1.0\textwidth]{img/attack2bit.png} \\
@@ -478,14 +480,14 @@ Notice that in this case, as before, we need a bruteforce in order to discover t
 The complexity of the algorithm is O(2 \cdot 255 \cdot n) where n=qbits.
 
 \subsection{Generalizing the fault model}
-During the explanation of the attack 2 we said that we considered only two injection models: the bit level and the byte level, but since often you can't control precisely where the injected fault will hit, a fault can be spread in a position larger than a byte, for example can be at WORD level, DWORD level, or at the QWORD level. 
+During the explanation of the attack 2 we said that we considered only two injection models: the bit level and the byte level, but since often you can't control precisely where the injected fault will finish, a fault can be spread in a position larger than a byte, for example can be at WORD level, DWORD level, or at the QWORD level. 
 
 \begin{figure}[H]
 \includegraphics[width=1.0\textwidth]{img/attack2word.png} \\
 \caption{\label{f_etichetta}Attack2 with a positive injected word fault }
 \end{figure}
 
-The algorithm for the attack remain the same, but in this case the nested cycle described in the algorithm-4 at lines 5 and 23, will be: \textit{while b <= $2^_{16}$} and since qbits depends on the length of the key we have a complexity of O($2^_{16}$ \cdot qbits). With the longest key size considered (p=3072,q=256) we will have a number of iteration of $2^_{16}$ \cdot $2^{8} = 2^_{24}$; in order to compute this we would need a better parallelized algorithm using a framework like OpenCL\cite{opencl}.
+The algorithm for the attack remains the same, but in this case the nested loop described in the algorithm-4 at lines 5 and 23, will be: \textit{while b <= $2^_{16}$} and since qbits depends on the length of the key we have a complexity of O($2^_{16}$ \cdot qbits). With the longest key size considered (p=3072,q=256) we will have a number of iteration of $2^_{16}$ \cdot $2^{8} = 2^_{24}$; in order to compute this we would need a better parallelized algorithm using a framework like OpenCL\cite{opencl}.
 
 The same thing applies to the DWORD level (32 bit) and the QWORD level (64 bit) the first will have a max. number of iteration of: $2^_{32}$ \cdot $2^{8} = 2^_{40}$, the latter will have a max. number of iteration of: $2^_{64}$ \cdot $2^{8} = 2^_{72}$.
 
@@ -539,25 +541,25 @@ For the attack 2, during the fault injection, we have to consider a completely r
 \caption{\label{f_etichetta}Attack2, byte level with the worst scenario }
 \end{figure}
 
-For this reason the attack's time estimated with a single run would be an imprecise measure.In order to give a better estimation of the attack's time we have randomized in the library code where the fault happen and taken the average time produced by 30 attack's rounds.The times are taken using the C function \texttt{clock\_t clock(void)} that returns the sum of user and system time and on our 32 bits system it give a maximum possible precision of 1$\mu$s.The registered times include also the generation of the original signature and the validation step of the attack.
+For this reason the attack's time estimated with a single run would be an imprecise measure.In order to give a better estimation of the attack's time we have randomized in the library code where the fault happen and taken the average time produced by 30 attack's rounds.The registered times include also the generation of the original signature and the validation step of the attack.
 
 \subsection{Damage the exponentation}
 
-In this attack the distincton between bit/byte/WORD/DWORD/QWORD level has no meaning because the time complexity is always O(1) regardless the type of the fault injected. 
+In this attack the distinction between bit/byte/WORD/DWORD/QWORD level has no meaning because the time complexity is always O(1) regardless the type of the fault injected. 
 \\
 These are the average times necessary in order to complete the attacks,for each key length:
 
 
 \begin{table}[H]
-\caption{ Average times registered for attack 1 produced by 30 runs}
+\caption{ Average times over 30 runs registered for attack 1 }
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
 Key length        & Time [ms] \\
 \hline
-1024/160 &       0.645  \\
-2048/224 &       2.083  \\
-2048/256 &       2.379  \\
-3072/256 &       4.600  \\ 
+1024/160 &       7 \\
+2048/224 &       11  \\
+2048/256 &       12  \\
+3072/256 &       23  \\ 
 \end{tabular}
 \end{center}
 \end{table}
@@ -570,43 +572,43 @@ These are the time necessary in order to complete the attack at the bit level an
 \\
 
 \begin{table}[H]
-\caption{Average times registered for attack 2 at the bit level, produced by 30 runs}
+\caption{Average times over 30 runs registered for attack 2 at the bit level}
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
 Key length        & Time [ms] \\
 \hline
-1024/160 &      50.672  \\
-2048/224 &      7.292   \\
-2048/256 &     204.662  \\
-3072/256 &     431.644  \\ 
+1024/160 &      171  \\
+2048/224 &      572   \\
+2048/256 &      779  \\
+3072/256 &      2094  $\mathtt{\sim}$ 2 sec. \\ 
 \end{tabular}
 \end{center}
 \end{table}
 
 
 \begin{table}[H]
-\caption{Average times registered for attack 2 at the byte level, produced by 30 runs}
+\caption{Average times over 30 runs registered for attack 2 at the byte level}
 \begin{center}
 \begin{tabular}{l*{6}{c}r}
 Key length        & Time [ms] \\
 \hline
-1024/160 &        666.924\\
-2048/224 &       1859.158 $\mathtt{\sim}$ 2 sec. \\
-2048/256 &       3507.466 $\mathtt{\sim}$ 3 sec.   \\
-3072/256 &       8611.887 $\mathtt{\sim}$ 8 sec.  \\ 
+1024/160 &        44267  $\mathtt{\sim}$ 44 sec. \\
+2048/224 &       212596  $\mathtt{\sim}$ 3.5 min.\\
+2048/256 &       8398991  $\mathtt{\sim}$ 2.20 hour. \\
+3072/256 &       19778534  $\mathtt{\sim}$ 5.4 hour. \\
 \end{tabular}
 \end{center}
 \end{table}
 
 
 \section{Limits}
-As presented before, in order to work the attacks presented need the parameters \textit{r} and \textit{s}, and two signatures ( the correct one and the faulty one ) of the same message \textit{m}; all this parameters are sent in plain over the untrusted channel, in fact \textit{r} and \textit{s} represent the signature sent and \textit{m} is the message to be verified ( with the dsa verify algorithm ) against the signature.\\
+As presented before, in order to work the attacks presented need the parameters \textit{r} and \textit{s} from the two signatures ( the correct one and the faulty one ) of the same message \textit{m}; all this parameters are sent in plain over the untrusted channel. 
 The attacks fail if any of the previous condition aren't satisfied: we can't retreive the parameter \textit{r} or \textit{s}, we can't retreive the message \textit{m}, or we can't sign the message \textit{m} two times.\\\\
 Given that, a possible mitigation of these attack would be, for example, to protect the signature sended over the channel, or the  message sent, or why not both, with the public key of the destination; in this scenario we can't retreive enough parameters in order to satisfy the equations that calculate the private key.
 
 
 \section{Conclusion}
-According to the RFC\cite{rfc}, "the determinism of the algorithm described in this note may be useful to an attacker in some forms of side-channel attacks". With this paper we prove this fact by simulating two active side channel attacks via software that can retreive the private keys of a dsa key pair with any length. The descriptions of these attacks can be easily applied to a real scenario where the attacked system doesn't implement good countermeasures against side-channel attacks. Finally we proposed a possible easy mitigation against these attacks. 
+According to the RFC\cite{rfc}, "the determinism of the algorithm described in this note may be useful to an attacker in some forms of side-channel attacks". With this paper we prove this fact by simulating two active side channel attacks via software that can retreive the private keys of a dsa key pair with any length. The descriptions of these attacks can be easily applied to a real scenario where the attacked system doesn't implement good countermeasures against side-channel attacks. Finally we proposed a possible easy mitigation against these attacks.
 
 \addcontentsline{toc}{section}{\refname}
 \begin{thebibliography}{10}
@@ -615,6 +617,7 @@ According to the RFC\cite{rfc}, "the determinism of the algorithm described in t
 \bibitem{lib} \url{https://www.gnu.org/software/libgcrypt/}
 \bibitem{sexp} \url{http://rosettacode.org/wiki/S-Expressions}
 \bibitem{opencl} \url{https://www.khronos.org/opencl/}
+\bibitem{wiki} \url{https://en.wikipedia.org/wiki/Digital_signature}
 \end{thebibliography}
 
 \end{document}
